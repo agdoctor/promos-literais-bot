@@ -83,18 +83,22 @@ async def fetch_product_metadata(url: str) -> dict:
         try:
             if HAS_CURL_CFFI:
                 async with CurlSession(impersonate=browser, headers=common_headers) as s:
-                    # Referer ajuda em algumas lojas
+                    # Referer ajuda em lojas como KaBuM/FastShop/Shopee
                     if "kabum.com.br" in url:
                         s.headers.update({"Referer": "https://www.google.com/"})
                     elif "amazon.com.br" in url:
                         s.headers.update({"Referer": "https://www.amazon.com.br/"})
-                        
-                    response = await s.get(url, timeout=20, allow_redirects=True)
+                    elif "shopee.com.br" in url:
+                        s.headers.update({"Referer": "https://shopee.com.br/"})
+                    elif "aliexpress.com" in url:
+                        s.headers.update({"Referer": "https://pt.aliexpress.com/"})
+
+                    response = await s.get(url, timeout=30, allow_redirects=True)
                     text = response.text
                     status_code = response.status_code
             else:
                 # Fallback para httpx
-                async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
+                async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
                     response = await client.get(url)
                     text = response.text
                     status_code = response.status_code
@@ -104,57 +108,90 @@ async def fetch_product_metadata(url: str) -> dict:
             if status_code != 200:
                 print(f"⚠️ Status {status_code} na tentativa {attempt + 1}")
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(random.uniform(0.5, 1.5))
+                    await asyncio.sleep(random.uniform(1.0, 3.0))
                     continue
-                else:
-                    return metadata
+                else: break
             
             soup = BeautifulSoup(text, 'html.parser')
-            title_tag = soup.find("title")
-            raw_title = title_tag.text.strip() if title_tag else ""
             
-            # Detecta bloqueio real
-            low_title = raw_title.lower().strip()
-            is_blocked = False
+            # 1. Tentar Título por diversos Seletores
+            title = ""
+            selectors = [
+                ("meta", {"property": "og:title"}),
+                ("meta", {"name": "twitter:title"}),
+                ("h1", {}),
+                ("#productTitle", {}), 
+                (".product-title", {}), 
+                (".item-title", {}),
+                ("title", {})
+            ]
             
-            block_keywords = ["robot check", "captcha", "503 - erro", "service unavailable", "indisponível", "acesso negado", "forbidden", "just a moment"]
-            if any(kw in low_title for kw in block_keywords):
-                is_blocked = True
-            
-            if not is_blocked:
-                generic_names = ["amazon.com.br", "mercado livre", "mercadolivre", "amazon", "kabum", "kabum!"]
-                if low_title in generic_names or (len(low_title) < 25 and any(kw == low_title for kw in generic_names)):
-                    is_blocked = True
+            for tag_name, attrs in selectors:
+                tag = soup.find(tag_name, attrs)
+                if tag:
+                    content = tag.get("content") or tag.text
+                    if content and len(content.strip()) > 5:
+                        title = content.strip()
+                        # Limpeza de títulos
+                        for store in ["Amazon.com.br", "KaBuM!", "Mercado Livre", "Shopee Brasil", "Magazine Luiza"]:
+                            title = title.split(f" | {store}")[0].split(f" - {store}")[0]
+                        break
 
-            if is_blocked:
-                print(f"🚫 Bloqueio real detectado no título: '{raw_title}'")
+            # 2. Tentar Título em Scripts JSON+LD (Shopee/AliExpress/Casas Bahia)
+            if not title or any(kw in title.lower() for kw in ["just a moment", "captcha", "robot"]):
+                scripts = soup.find_all("script", type="application/ld+json")
+                for script in scripts:
+                    try:
+                        data = json.loads(script.string)
+                        if isinstance(data, list): data = data[0]
+                        if data.get("@type") == "Product":
+                            title = data.get("name", title)
+                            if not metadata["image_url"]:
+                                metadata["image_url"] = data.get("image", "")
+                        elif "@graph" in data:
+                            for item in data["@graph"]:
+                                if item.get("@type") == "Product":
+                                    title = item.get("name", title)
+                    except: pass
+
+            # 3. Detectar bloqueios
+            low_title = title.lower()
+            block_keywords = ["robot check", "captcha", "503 - erro", "service unavailable", "acesso negado", "forbidden", "just a moment"]
+            if not title or any(kw in low_title for kw in block_keywords):
+                print(f"🚫 Bloqueio ou título vazio detectado: '{title[:50]}'")
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(random.uniform(0.5, 1.5))
+                    await asyncio.sleep(random.uniform(1.0, 3.0))
                     continue
-                else:
-                    metadata["title"] = ""
-                    return metadata
-            
-            # Sucesso parcial: Tentar extrair dados
-            og_title = soup.find("meta", property="og:title")
-            if og_title and og_title.get("content") and not any(kw in str(og_title.get("content")).lower() for kw in ["captcha", "robot"]):
-                metadata["title"] = og_title["content"]
-            elif raw_title:
-                metadata["title"] = raw_title.split(" | Amazon.com.br")[0].split(": Amazon.com.br:")[0].split(" | KaBuM!")[0]
+                else: break
 
-            extracted_title = str(metadata.get("title", ""))
-            if any(kw in extracted_title.lower() for kw in ["503 - erro", "service unavailable", "robot check", "kabum", "amazon.com.br"]):
-                metadata["title"] = ""
-                if attempt < max_retries - 1: continue
-                else: return metadata
+            metadata["title"] = title
 
-            if metadata.get("title"):
-                print(f"✅ Sucesso na tentativa {attempt + 1}!")
+            # 4. Tentar Imagem
+            if not metadata["image_url"] or "captcha" in str(metadata["image_url"]).lower():
+                img_selectors = [
+                    ("meta", {"property": "og:image"}),
+                    ("meta", {"name": "twitter:image"}),
+                    ("img", {"id": "landingImage"}), 
+                    ("img", {"id": "main-image"}),   
+                    ("img", {"class": "product-image"}),
+                    ("img", {"class": "i-amphtml-fill-content"}) 
+                ]
                 
-                # Imagem
-                og_image = soup.find("meta", property="og:image")
-                if og_image and og_image.get("content"):
-                    metadata["image_url"] = str(og_image["content"])
+                for tag_name, attrs in img_selectors:
+                    tag = soup.find(tag_name, attrs)
+                    if tag:
+                        img_src = tag.get("content") or tag.get("data-a-dynamic-image") or tag.get("src")
+                        if img_src:
+                            if img_src.startswith("{"): 
+                                try: metadata["image_url"] = list(json.loads(img_src).keys())[0]
+                                except: pass
+                            else:
+                                metadata["image_url"] = img_src
+                            break
+
+            # Finalização de sucesso
+            if metadata["title"]:
+                print(f"✅ Sucesso na tentativa {attempt + 1}!")
                 
                 if metadata["image_url"]:
                     img_url = str(metadata["image_url"])
@@ -162,11 +199,11 @@ async def fetch_product_metadata(url: str) -> dict:
                     try:
                         if HAS_CURL_CFFI:
                             async with CurlSession(impersonate=browser) as s:
-                                img_res = await s.get(img_url, timeout=10)
+                                img_res = await s.get(img_url, timeout=15)
                                 img_content = img_res.content
                                 img_status = img_res.status_code
                         else:
-                            async with httpx.AsyncClient(timeout=10) as client:
+                            async with httpx.AsyncClient(timeout=15) as client:
                                 img_res = await client.get(img_url)
                                 img_content = img_res.content
                                 img_status = img_res.status_code
