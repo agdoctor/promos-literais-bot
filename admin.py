@@ -54,7 +54,13 @@ async def cmd_start(message: Message):
         parse_mode="Markdown"
     )
     # Remove qualquer teclado físico residual (Menu de acesso rápido desativado)
-    await message.answer("Menu principal carregado.", reply_markup=ReplyKeyboardRemove())
+    # Enviamos uma mensagem temporária e apagamos na mesma hora para não poluir
+    msg = await message.answer("⏳", reply_markup=ReplyKeyboardRemove())
+    try:
+        await msg.delete()
+    except:
+        pass
+        
     user_states[user_id] = None
 
 @dp.message(Command("meuid"))
