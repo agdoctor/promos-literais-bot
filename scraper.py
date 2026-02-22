@@ -119,23 +119,31 @@ async def fetch_product_metadata(url: str) -> dict:
             
             # 1. Tentar Título por diversos Seletores
             title = ""
-            selectors = [
-                ("meta", {"property": "og:title"}),
-                ("meta", {"name": "twitter:title"}),
-                ("h1", {}),
-                ("#productTitle", {}), 
-                (".product-title", {}), 
-                (".item-title", {}),
-                ("title", {})
+            css_selectors = [
+                "#productTitle",
+                "meta[property='og:title']",
+                "meta[name='twitter:title']",
+                "h1",
+                ".product-title",
+                ".item-title",
+                "title"
             ]
             
-            for tag_name, attrs in selectors:
-                tag = soup.find(tag_name, attrs)
+            for selector in css_selectors:
+                tag = soup.select_one(selector)
                 if tag:
-                    content = tag.get("content") or tag.text
+                    content = tag.get("content") if tag.name == "meta" else tag.text
                     if content and len(content.strip()) > 5:
                         title = content.strip()
-                        # Limpeza de títulos
+                        
+                        # Fix para "Seguir o autor" da Amazon
+                        if title.lower() == "seguir o autor":
+                            title = ""
+                            continue
+                            
+                        # Limpeza de títulos (Remove ISBN de livros Amazon)
+                        title = re.sub(r'\s*-\s*\d{10,13}\s*-\s*Livros na Amazon Brasil.*$', '', title, flags=re.IGNORECASE)
+                        
                         for store in ["Amazon.com.br", "KaBuM!", "Mercado Livre", "Shopee Brasil", "Magazine Luiza"]:
                             title = title.split(f" | {store}")[0].split(f" - {store}")[0]
                         break
