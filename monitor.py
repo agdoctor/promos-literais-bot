@@ -88,9 +88,26 @@ async def start_monitoring():
     # Cache para não processar a mesma mensagem duas vezes (ex: edições rápidas ou múltiplos triggers do Telethon)
     processed_message_ids = set()
     
-    @client.on(events.NewMessage(chats=source_channels))
+    @client.on(events.NewMessage())
     async def new_message_handler(event):
         try:
+            # Verifica se o canal está na lista monitorada (vinda do banco de dados)
+            source_channels = get_canais()
+            
+            # Identificadores possíveis: @username ou ID numérico (como string ou int)
+            chat = await event.get_chat()
+            chat_username = getattr(chat, 'username', None)
+            chat_id = str(event.chat_id)
+            
+            is_monitored = False
+            if chat_username and chat_username.lower() in [c.lower().replace('@', '') for c in source_channels]:
+                is_monitored = True
+            elif chat_id in source_channels or str(event.chat_id) in source_channels:
+                is_monitored = True
+                
+            if not is_monitored:
+                return
+
             # Verifica se o bot está pausado globalmente
             if get_config("pausado") == "1":
                 return
