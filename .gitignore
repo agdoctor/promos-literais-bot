@@ -1,0 +1,9 @@
+.env
+*.db
+*.session
+*.session-journal
+__pycache__/
+downloads/
+venv/
+.vscode/
+*.pyc

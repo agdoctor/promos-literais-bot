@@ -1,0 +1,8 @@
+telethon
+google-generativeai
+aiogram
+httpx
+python-dotenv
+tenacity
+Pillow
+beautifulsoup4
