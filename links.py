@@ -26,7 +26,8 @@ def extract_urls(text: str) -> list[str]:
     Pega links com ou sem https:// (ex: mercadolivre.com/sec/123).
     """
     # Regex melhorada para pegar domínios conhecidos mesmo sem https
-    url_pattern = re.compile(r'(https?://\S+|www\.\S+|mercadolivre\.com\S+|amzn\.to\S+|amzlink\.to\S+|amz\.run\S+|shopee\.com\.br\S+|is\.gd\S+|bit\.ly\S+|tinyurl\.com\S+|cutt\.ly\S+)')
+    # Regex robusta para capturar links com ou sem protocolo, focando em domínios de ofertas
+    url_pattern = re.compile(r'(?:https?://)?(?:www\.)?(?:amazon\.com\.br|amzn\.to|amzlink\.to|amz\.run|mercadolivre\.com\.br|mercadolivre\.com|mlb\.sh|shopee\.com\.br|is\.gd|bit\.ly|tinyurl\.com|cutt\.ly)/\S+')
     urls = url_pattern.findall(text)
     
     # Normalizar adicionando https:// se faltar

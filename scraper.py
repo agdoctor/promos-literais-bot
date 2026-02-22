@@ -153,14 +153,19 @@ async def fetch_product_metadata(url: str) -> dict:
                         try:
                             img_res = await client.get(img_url, headers=headers, timeout=10.0)
                             if img_res.status_code == 200:
-                                if not os.path.exists("downloads"): os.makedirs("downloads")
-                                file_name = f"downloads/scraped_{random.randint(1000, 9999)}.jpg"
+                                # Garantir caminho absoluto para evitar erros em ambientes como SquareCloud
+                                base_path = os.path.join(os.getcwd(), "downloads")
+                                if not os.path.exists(base_path): os.makedirs(base_path)
+                                
+                                file_name = os.path.join(base_path, f"scraped_{random.randint(1000, 9999)}.jpg")
                                 with open(file_name, "wb") as f:
                                     f.write(img_res.content)
                                 metadata["local_image_path"] = file_name
-                                print(f"📸 Imagem salva: {file_name}")
+                                print(f"📸 Imagem salva (Sucesso): {file_name}")
+                            else:
+                                print(f"⚠️ Falha ao baixar imagem do scraper: Status {img_res.status_code} para {img_url}")
                         except Exception as e:
-                            print(f"❌ Erro ao baixar imagem: {e}")
+                            print(f"❌ Erro ao baixar imagem do scraper: {e}")
                             
                     return metadata
                     

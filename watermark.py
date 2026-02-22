@@ -7,7 +7,12 @@ def apply_watermark(base_image_path: str, watermark_path: str = "watermark.png")
     The script will center the product photo inside a white canvas matching the frame size,
     and overlay the frame on top.
     """
+    # Garante que o caminho do watermark seja absoluto
+    if not os.path.isabs(watermark_path):
+        watermark_path = os.path.join(os.getcwd(), watermark_path)
+
     if not os.path.exists(base_image_path) or not os.path.exists(watermark_path):
+        print(f"⚠️ Watermark ou base não encontrados: {base_image_path}, {watermark_path}")
         return base_image_path
         
     # Ignora o arquivo se ele estiver vazio (como nosso placeholder)

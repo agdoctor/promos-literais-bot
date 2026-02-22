@@ -16,9 +16,10 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFil
 # Variável global para armazenar as ofertas que aguardam aprovação manual
 ofertas_pendentes_admin = []
 
-# Certifique-se de que o diretório de downloads existe
-if not os.path.exists("downloads"):
-    os.makedirs("downloads")
+# Certifique-se de que o diretório de downloads existe com caminho absoluto
+base_downloads_path = os.path.join(os.getcwd(), "downloads")
+if not os.path.exists(base_downloads_path):
+    os.makedirs(base_downloads_path)
 
 client = TelegramClient('literalmente_userbot', API_ID, API_HASH)
 
@@ -185,8 +186,16 @@ async def start_monitoring():
             media_path = None
             if event.message.media:
                 print("⏬ Baixando mídia associada...")
-                media_path = await event.message.download_media(file="downloads/")
-                print(f"✅ Mídia baixada: {media_path}")
+                try:
+                    # Usa o caminho absoluto garantido
+                    media_path = await event.message.download_media(file=base_downloads_path + os.path.sep)
+                    if media_path:
+                        print(f"✅ Mídia baixada: {media_path}")
+                    else:
+                        print("⚠️ Falha ao baixar mídia: Retornou None.")
+                except Exception as e:
+                    print(f"❌ Erro ao baixar mídia via Telethon: {e}")
+                    media_path = None
                 
                 # Applica a marca d'água (se o arquivo watermark.png existir na raiz)
                 try:
@@ -194,6 +203,22 @@ async def start_monitoring():
                     print("🖌️ Marca d'água aplicada à imagem.")
                 except Exception as e:
                     print(f"⚠️ Não foi possível aplicar marca d'água: {e}")
+            
+            # --- FAIXA DE SEGURANÇA: Se não tem mídia, tenta extrair do link ---
+            if not media_path:
+                print("🔍 Mídia não encontrada na mensagem, tentando extrair do link...")
+                from links import extract_urls
+                urls_detectadas = extract_urls(mensagem_texto)
+                if urls_detectadas:
+                    from scraper import fetch_product_metadata
+                    # Tenta o primeiro link detectado
+                    meta_fallback = await fetch_product_metadata(urls_detectadas[0])
+                    media_path = meta_fallback.get("local_image_path")
+                    if media_path:
+                        print(f"✅ Mídia extraída via scraping: {media_path}")
+                        try:
+                            media_path = apply_watermark(media_path)
+                        except: pass
             
             # --- FASE 1: Extrair, Remover e Processar Links (Conversão e Expansão) ---
             print("🔗 Processando links e substituindo por placeholders...")
