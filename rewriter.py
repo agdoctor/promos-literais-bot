@@ -1,4 +1,4 @@
-from google import genai
+import google.genai as genai
 from config import GEMINI_API_KEY
 import asyncio
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
