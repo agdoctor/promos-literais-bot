@@ -1,4 +1,5 @@
 .env
+square_env.txt
 # *.db
 *.session
 *.session-journal
