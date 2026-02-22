@@ -296,5 +296,11 @@ async def start_monitoring():
             
         except Exception as e:
             print(f"❌ Erro ao processar mensagem: {e}")
+            admin_id_str = get_config("admin_id")
+            if admin_id_str:
+                try:
+                    await bot.send_message(chat_id=int(admin_id_str), text=f"⚠️ **Erro no Monitor (Literalmente):**\n`{str(e)[:500]}`", parse_mode="Markdown")
+                except:
+                    pass
 
     await client.run_until_disconnected()
