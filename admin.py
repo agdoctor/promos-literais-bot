@@ -416,27 +416,31 @@ async def handle_text(message: Message):
     elif estado == "esperando_link_criacao":
         link = message.text.strip()
         user_temp_data[message.from_user.id] = {"link": link}
-        msg = await message.answer("🔍 Extraindo informações da página...")
+        msg_status = await message.answer("🔍 Extraindo informações da página...")
         
-        from scraper import fetch_product_metadata
-        metadata = await fetch_product_metadata(link)
-        user_temp_data[message.from_user.id]["titulo"] = metadata.get("title", "")
-        user_temp_data[message.from_user.id]["local_image_path"] = metadata.get("local_image_path", "")
-        
-        await msg.delete()
-        status = metadata.get("status_code", 200)
-        titulo_achado = metadata.get('title')
-        
-        if status in [403, 503] or not titulo_achado:
-            user_states[message.from_user.id] = "esperando_titulo_criacao"
-            warn_msg = "⚠️ Bloqueio detectado ou falha na extração.\n\n"
-            retry_kb = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔄 Tentar Novamente", callback_data="retry_scraping")]
-            ])
-            await message.answer(f"{warn_msg}Digite o nome manualmente ou tente extrair novamente:", reply_markup=retry_kb)
-        else:
-            user_states[message.from_user.id] = "esperando_preco_criacao"
-            await message.answer(f"✅ Identifiquei: **{titulo_achado}**\n\nQual é o valor final? (Só números):")
+        try:
+            from scraper import fetch_product_metadata
+            metadata = await fetch_product_metadata(link)
+            user_temp_data[message.from_user.id]["titulo"] = metadata.get("title", "")
+            user_temp_data[message.from_user.id]["local_image_path"] = metadata.get("local_image_path", "")
+            
+            status = metadata.get("status_code", 200)
+            titulo_achado = metadata.get('title')
+            
+            if status in [403, 503, 404] or not titulo_achado:
+                user_states[message.from_user.id] = "esperando_titulo_criacao"
+                warn_msg = "⚠️ Bloqueio detectado ou falha na extração.\nAmazon, ML ou KaBuM bloquearam o acesso.\n\n"
+                retry_kb = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🔄 Tentar Novamente", callback_data="retry_scraping")]
+                ])
+                await message.answer(f"{warn_msg}Digite o nome do livro manualmente para continuar:", reply_markup=retry_kb)
+            else:
+                user_states[message.from_user.id] = "esperando_preco_criacao"
+                await message.answer(f"✅ Identifiquei: **{titulo_achado}**\n\nQual é o valor final? (Só números):")
+        finally:
+            try:
+                await msg_status.delete()
+            except: pass
 
     elif estado == "esperando_titulo_criacao":
         user_temp_data[message.from_user.id]["titulo"] = message.text.strip()

@@ -1,4 +1,4 @@
-import httpx
+from curl_cffi import requests
 from bs4 import BeautifulSoup
 import os
 import re
@@ -19,50 +19,19 @@ def clean_amazon_url(url: str) -> str:
         return f"https://www.amazon.com.br/dp/{asin}"
     return url
 
-def get_header_profiles() -> List[Dict[str, str]]:
-    """Retorna uma lista de perfis de headers realistas."""
-    return [
-        {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
-            "sec-ch-ua": '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"Windows"',
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-        },
-        {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://www.google.com.br/",
-        },
-        {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-        }
-    ]
+def get_random_browser() -> str:
+    """Retorna um perfil de navegador aleatório suportado pelo curl_cffi."""
+    return random.choice(["chrome110", "chrome116", "chrome120", "safari15_5"])
 
 async def fetch_product_metadata(url: str) -> dict:
     """
-    Acessa a URL e tenta extrair o título do produto e a imagem principal.
-    Implementa Smart Scraper com rotação de headers e auto-retry.
+    Acessa a URL e tenta extrair o título do produto e a imagem principal usando curl_cffi
+    para personificação de TLS de navegadores reais (bypass robusto).
     """
     url = clean_amazon_url(url)
-    print(f"🔍 [SmartScraper] Iniciando extração: {url}")
+    print(f"🔍 [SmartScraper TLS] Iniciando extração: {url}")
 
-    profiles = get_header_profiles()
     max_retries = 3
-    
     metadata = {
         "title": "",
         "image_url": "",
@@ -71,55 +40,66 @@ async def fetch_product_metadata(url: str) -> dict:
     }
 
     for attempt in range(max_retries):
-        headers = random.choice(profiles)
-        ua = headers.get("User-Agent", "")
-        print(f"🔄 Tentativa {attempt + 1}/{max_retries} usando perfil: {ua[:50]}...")
+        browser = get_random_browser()
+        print(f"🔄 Tentativa {attempt + 1}/{max_retries} usando personificação: {browser}")
         
         try:
-            async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-                response = await client.get(url, headers=headers)
+            from curl_cffi.requests import AsyncSession
+            
+            async with AsyncSession(impersonate=browser) as s:
+                response = await s.get(url, timeout=20, allow_redirects=True)
                 metadata["status_code"] = response.status_code
                 
                 if response.status_code != 200:
                     print(f"⚠️ Status {response.status_code} na tentativa {attempt + 1}")
                     if attempt < max_retries - 1:
-                        await asyncio.sleep(random.uniform(1.0, 3.0))
+                        await asyncio.sleep(random.uniform(0.5, 1.5))
                         continue
                 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 title_tag = soup.find("title")
                 raw_title = title_tag.text.strip() if title_tag else ""
                 
-                # Detecta bloqueio pelo conteúdo do título
-                is_blocked = any(kw in raw_title.lower() for kw in ["robot check", "captcha", "503 - erro", "service unavailable", "indisponível"])
+                # Detecta bloqueio real (página de erro ou título idêntico ao site)
+                low_title = raw_title.lower().strip()
+                is_blocked = False
                 
+                # Keywords que indicam bloqueio REAL
+                block_keywords = ["robot check", "captcha", "503 - erro", "service unavailable", "indisponível", "acesso negado", "forbidden"]
+                if any(kw in low_title for kw in block_keywords):
+                    is_blocked = True
+                
+                # Se o título for APENAS o nome da loja ou curto demais + nome da loja
+                if not is_blocked:
+                    generic_names = ["amazon.com.br", "mercado livre", "mercadolivre", "amazon"]
+                    if low_title in generic_names or (len(low_title) < 20 and any(kw == low_title for kw in generic_names)):
+                        is_blocked = True
+
                 if is_blocked:
-                    print(f"🚫 Bloqueio detectado no título: '{raw_title}'")
+                    print(f"🚫 Bloqueio real detectado no título: '{raw_title}'")
                     if attempt < max_retries - 1:
-                        await asyncio.sleep(random.uniform(1.5, 4.0))
+                        await asyncio.sleep(random.uniform(0.5, 1.5))
                         continue
                     else:
-                        # Se for a última tentativa e ainda estiver bloqueado, não define o título
                         metadata["title"] = ""
                         break
                 
-                # Se chegou aqui, parece que temos um HTML válido
+                # Sucesso parcial: Tentar extrair dados
                 og_title = soup.find("meta", property="og:title")
                 if og_title and og_title.get("content") and not any(kw in str(og_title.get("content")).lower() for kw in ["captcha", "robot"]):
                     metadata["title"] = og_title["content"]
                 elif raw_title:
+                    # Limpa títulos da Amazon que vem com o sufixo da loja
                     metadata["title"] = raw_title.split(" | Amazon.com.br")[0].split(": Amazon.com.br:")[0]
 
-                # Se o título extraído ainda parecer erro, limpa
+                # Valida se o título extraído é útil
                 extracted_title = str(metadata.get("title", ""))
                 if any(kw in extracted_title.lower() for kw in ["503 - erro", "service unavailable", "robot check"]):
                     metadata["title"] = ""
-                    if attempt < max_retries - 1:
-                        continue
-                    else:
-                        break
+                    if attempt < max_retries - 1: continue
+                    else: break
 
-                # Tenta pegar og:image
+                # Imagem
                 og_image = soup.find("meta", property="og:image")
                 if og_image and og_image.get("content"):
                     metadata["image_url"] = str(og_image["content"])
@@ -129,31 +109,25 @@ async def fetch_product_metadata(url: str) -> dict:
                 if not current_img or "captcha" in current_img.lower():
                     img_tag = soup.find("img", id="landingImage") or soup.find("img", id="main-image")
                     if img_tag:
-                        # data-a-dynamic-image
                         dyn_data = img_tag.get("data-a-dynamic-image")
                         if dyn_data:
                             try:
                                 dyn_img = json.loads(str(dyn_data))
                                 metadata["image_url"] = str(list(dyn_img.keys())[0]) if dyn_img else ""
                             except: pass
-                        
                         if not metadata.get("image_url"):
                             metadata["image_url"] = str(img_tag.get("data-old-hires") or img_tag.get("src") or "")
 
-                # Se temos título e imagem (ou pelo menos título), sucesso!
-                final_title = str(metadata.get("title", ""))
-                if final_title and not is_blocked:
+                if metadata.get("title") and not is_blocked:
                     print(f"✅ Sucesso na tentativa {attempt + 1}!")
                     
-                    # Tenta baixar a imagem
                     if metadata["image_url"]:
                         img_url = str(metadata["image_url"])
                         if img_url.startswith("//"): img_url = "https:" + img_url
-                        
                         try:
-                            img_res = await client.get(img_url, headers=headers, timeout=10.0)
+                            img_res = await s.get(img_url, timeout=10)
                             if img_res.status_code == 200:
-                                # Garantir caminho absoluto para evitar erros em ambientes como SquareCloud
+                                # Garantir caminho absoluto
                                 base_path = os.path.join(os.getcwd(), "downloads")
                                 if not os.path.exists(base_path): os.makedirs(base_path)
                                 
@@ -161,18 +135,15 @@ async def fetch_product_metadata(url: str) -> dict:
                                 with open(file_name, "wb") as f:
                                     f.write(img_res.content)
                                 metadata["local_image_path"] = file_name
-                                print(f"📸 Imagem salva (Sucesso): {file_name}")
-                            else:
-                                print(f"⚠️ Falha ao baixar imagem do scraper: Status {img_res.status_code} para {img_url}")
+                                print(f"📸 Imagem salva: {file_name}")
                         except Exception as e:
-                            print(f"❌ Erro ao baixar imagem do scraper: {e}")
-                            
+                            print(f"❌ Erro ao baixar imagem: {e}")
                     return metadata
                     
         except Exception as e:
-            print(f"❌ Erro na tentativa {attempt + 1}: {e}")
+            print(f"❌ Erro na tentativa {attempt + 1} com {browser}: {e}")
             if attempt < max_retries - 1:
-                await asyncio.sleep(2)
+                await asyncio.sleep(1)
     
     return metadata
 

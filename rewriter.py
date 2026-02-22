@@ -29,7 +29,7 @@ REGRAS DE OURO:
 6. NUNCA mencione outros canais, grupos ou concorrentes. REMOVA qualquer link de terceiros.
 7. CUPOM COPIÁVEL: Se houver cupom, você DEVE colocar a tag <code> no PRÓPRIO CÓDIGO DO CUPOM. Exemplo correto: `Use o Cupom: <code>LIVRO10</code>`.
 8. NUNCA use a tag <br> ou <p>. Use quebras de linha reais.
-9. PRESERVE OS LINKS INLINE: O texto original conterá marcações como [LINK_0], [LINK_1], etc. Você DEVE manter essas marcações EXATAMENTE onde elas estavam.
+9. PRESERVE OS LINKS INLINE: O texto original conterá marcações como [LINK_0], [LINK_1], etc. Você DEVE manter essas marcações EXATAMENTE onde elas estavam. Se estiver criando um texto DO ZERO para um novo post, você DEVE terminar o corpo do texto com a marcação [LINK_0] para que o botão de compra seja inserido.
 10. NUNCA termine o texto com emojis de carrinho ou setas de link se não houver um [LINK_X] logo depois.
 
 Retorne APENAS o HTML final. Use apenas as tags <b> e <code>.
