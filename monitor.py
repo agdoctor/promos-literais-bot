@@ -303,4 +303,12 @@ async def start_monitoring():
                 except:
                     pass
 
-    await client.run_until_disconnected()
+    # Loop de reconexão persistente para evitar quedas por [Errno 104] (Connection reset by peer)
+    while True:
+        try:
+            if not client.is_connected():
+                await client.connect()
+            await client.run_until_disconnected()
+        except Exception as connection_error:
+            print(f"⚠️ Aviso: Telethon desconectado. Reconectando em 10 segundos... Motivo: {connection_error}")
+            await asyncio.sleep(10)
