@@ -100,7 +100,7 @@ DADOS DO PRODUTO:
 
 REGRAS ADICIONAIS:
 1. Comece o post de forma impactante.
-2. Você DEVE incluir a marcação [LINK_0] obrigatoriamente onde o botão de compra deve aparecer (geralmente ao final, após o preço).
+2. IMPORTANTE: Termine o seu texto obrigatoriamente com a marcação [LINK_0] em uma nova linha para que o botão de compra seja inserido.
 3. Use tags <b> para o nome do livro e para o preço.
 4. Nunca use Markdown (**).
 
