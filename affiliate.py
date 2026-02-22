@@ -17,8 +17,8 @@ def clean_tracking_params(url: str) -> str:
         params_to_remove = [
             'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
             'fbclid', 'gclid', 'smid', 'pf_rd_p', 'pf_rd_r', 'pd_rd_w', 'pd_rd_wg', 'pd_rd_r',
-            'dchild', 'keywords', 'qid', 'sr', 'th', 'psc',
-            'matt_tool', 'matt_word', 'product_trigger_id'
+            'dchild', 'keywords', 'qid', 'sr', 'th', 'psc', 'sp_atk', 'is_from_signup',
+            'matt_tool', 'matt_word', 'product_trigger_id', 'gad_source', 'gbraid', 'gclid'
         ]
         
         filtered_params = {k: v for k, v in params.items() if k not in params_to_remove}
