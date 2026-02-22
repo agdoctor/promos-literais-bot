@@ -646,8 +646,10 @@ async def global_error_handler(event: ErrorEvent):
     """Captura erros globais do Aiogram e notifica o admin"""
     print(f"⚠️ Erro Global Capturado: {event.exception}")
     try:
-        error_msg = f"⚠️ **ALERTA DE SISTEMA: ERRO INTERNO** ⚠️\n\n**Tipo:** `{type(event.exception).__name__}`\n**Erro:** `{str(event.exception)[:500]}`\n\n*Detalhes no log do servidor.*"
-        await bot.send_message(chat_id=ADMIN_IDS[0], text=error_msg, parse_mode="Markdown")
+        admin_id_str = get_config("admin_id")
+        if admin_id_str:
+            error_msg = f"⚠️ **ALERTA DE SISTEMA: ERRO INTERNO** ⚠️\n\n**Tipo:** `{type(event.exception).__name__}`\n**Erro:** `{str(event.exception)[:500]}`\n\n*Detalhes no log do servidor.*"
+            await bot.send_message(chat_id=int(admin_id_str), text=error_msg, parse_mode="Markdown")
     except Exception as notify_err:
         print(f"Não foi possível notificar o admin sobre o erro: {notify_err}")
 
@@ -660,11 +662,13 @@ async def start_admin_bot():
     
     # Enviar notificação de reinício
     try:
-        await bot.send_message(
-            chat_id=ADMIN_IDS[0], 
-            text="🚀 **SISTEMA INICIADO / REINICIADO**\n\n✅ Bot ativo e monitorando grupos selecionados.",
-            parse_mode="Markdown"
-        )
+        admin_id_str = get_config("admin_id")
+        if admin_id_str:
+            await bot.send_message(
+                chat_id=int(admin_id_str), 
+                text="🚀 **SISTEMA INICIADO / REINICIADO**\n\n✅ Bot ativo e monitorando grupos selecionados.",
+                parse_mode="Markdown"
+            )
     except Exception as e:
         print(f"Aviso: Não foi possível enviar notificação de startup: {e}")
         
