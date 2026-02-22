@@ -154,11 +154,18 @@ async def fetch_product_metadata(url: str) -> dict:
                                     title = item.get("name", title)
                     except: pass
 
-            # 3. Detectar bloqueios
+            # 3. Detectar bloqueios ou títulos genéricos inúteis
             low_title = title.lower()
             block_keywords = ["robot check", "captcha", "503 - erro", "service unavailable", "acesso negado", "forbidden", "just a moment"]
-            if not title or any(kw in low_title for kw in block_keywords):
-                print(f"🚫 Bloqueio ou título vazio detectado: '{title[:50]}'")
+            generic_titles = ["shopee brasil", "shopee portugal", "aliexpress - pt", "amazon.com.br", "mercado livre brasil"]
+            
+            is_invalid = not title or any(kw in low_title for kw in block_keywords)
+            if not is_invalid:
+                if any(low_title.startswith(gt) or low_title == gt for gt in generic_titles):
+                    is_invalid = True
+
+            if is_invalid:
+                print(f"🚫 Bloqueio ou título genérico detectado: '{title[:50]}'")
                 if attempt < max_retries - 1:
                     await asyncio.sleep(random.uniform(1.0, 3.0))
                     continue
