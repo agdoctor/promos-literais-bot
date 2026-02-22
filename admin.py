@@ -514,14 +514,18 @@ async def finalizar_criacao_manual(event_message: Message, user_id: int, modo_ai
     try:
         if modo_ai:
             texto_base = await gerar_promocao_por_link(
-                data.get("titulo", ""), 
+                data.get("titulo", "Livro"), 
                 data.get("link", ""), 
-                data.get("preco", ""), 
+                data.get("preco", "0.00"), 
                 data.get("cupom", ""),
                 data.get("observacao", "")
             )
         else:
             texto_base = data.get("texto_manual", "Oferta sem descrição.")
+
+        # Garantir marcador de link
+        if "[LINK_" not in texto_base:
+            texto_base += "\n\n[LINK_0]"
 
         texto_com_placeholders, placeholder_map = await process_and_replace_links(texto_base, data.get('link'))
         clean_text = texto_com_placeholders
