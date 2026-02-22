@@ -1,5 +1,5 @@
 telethon
-google-generativeai
+google-genai
 aiogram
 httpx
 python-dotenv
