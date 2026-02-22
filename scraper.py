@@ -6,6 +6,7 @@ import asyncio
 import random
 import json
 from typing import Dict, List, Any, Optional
+from config import PROXY_URL
 
 try:
     from curl_cffi.requests import AsyncSession as CurlSession
@@ -81,9 +82,11 @@ async def fetch_product_metadata(url: str) -> dict:
         print(f"🔄 Tentativa {attempt + 1}/{max_retries} usando personificação: {browser}")
         
         try:
+            proxy_dict = PROXY_URL if PROXY_URL else None
+            
             if HAS_CURL_CFFI:
                 async with CurlSession(impersonate=browser, headers=common_headers) as s:
-                    # Referer ajuda em lojas como KaBuM/FastShop/Shopee
+                    # Referer ajuda em algumas lojas
                     if "kabum.com.br" in url:
                         s.headers.update({"Referer": "https://www.google.com/"})
                     elif "amazon.com.br" in url:
@@ -92,13 +95,13 @@ async def fetch_product_metadata(url: str) -> dict:
                         s.headers.update({"Referer": "https://shopee.com.br/"})
                     elif "aliexpress.com" in url:
                         s.headers.update({"Referer": "https://pt.aliexpress.com/"})
-
-                    response = await s.get(url, timeout=30, allow_redirects=True)
+                        
+                    response = await s.get(url, timeout=30, allow_redirects=True, proxy=proxy_dict)
                     text = response.text
                     status_code = response.status_code
             else:
                 # Fallback para httpx
-                async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
+                async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}, proxy=proxy_dict) as client:
                     response = await client.get(url)
                     text = response.text
                     status_code = response.status_code
@@ -206,11 +209,11 @@ async def fetch_product_metadata(url: str) -> dict:
                     try:
                         if HAS_CURL_CFFI:
                             async with CurlSession(impersonate=browser) as s:
-                                img_res = await s.get(img_url, timeout=15)
+                                img_res = await s.get(img_url, timeout=15, proxy=proxy_dict)
                                 img_content = img_res.content
                                 img_status = img_res.status_code
                         else:
-                            async with httpx.AsyncClient(timeout=15) as client:
+                            async with httpx.AsyncClient(timeout=15, proxy=proxy_dict) as client:
                                 img_res = await client.get(img_url)
                                 img_content = img_res.content
                                 img_status = img_res.status_code

@@ -14,6 +14,9 @@ ML_AFFILIATE_COOKIE = os.getenv("ML_AFFILIATE_COOKIE")
 # Amazon Affiliate Tag
 AMAZON_TAG = os.getenv("AMAZON_TAG", "luiz4opromos-20")
 
+# Proxy Configuration (Opcional - Recomendado para evitar 403)
+PROXY_URL = os.getenv("PROXY_URL")
+
 # Tratar os canais, permitindo múltiplos separados por vírgula no futuro
 SOURCE_CHANNELS = [c.strip() for c in os.getenv("SOURCE_CHANNELS", "").split(',') if c.strip()]
 TARGET_CHANNEL = os.getenv("TARGET_CHANNEL")
