@@ -1,0 +1,7 @@
+# Configurações do Bot para a Square Cloud
+# Copie este arquivo para square_env.txt e preencha com seus dados
+
+BOT_TOKEN=SEU_TOKEN_AQUI
+GEMINI_API_KEY=SUA_CHAVE_AQUI
+AMAZON_TAG=suatag-20
+# ML_AFFILIATE_COOKIE=seu_cookie_aqui
