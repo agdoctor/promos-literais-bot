@@ -227,6 +227,7 @@ async def start_monitoring():
                     primeira_linha = mensagem_texto.split('\n')[0].strip()
                     titulo_real = re.sub(r'[^\w\s]', '', primeira_linha).strip().lower()[:50]
                 
+            from scraper import extract_price
             valor_orig = extract_price(mensagem_texto) or "0"
             valor_referencia_limpo = valor_orig.replace('.', '').replace(',', '.')
             
@@ -251,7 +252,6 @@ async def start_monitoring():
                         tokens_titulo = [t for t in titulo_pesquisa_lower.split() if len(t) > 3]
                         
                         # Match 1: O valor numérico precisa estar no post
-                        from scraper import extract_price
                         # Regex para capturar todos os valores R$ no historico
                         valor_encontrado_historico = re.findall(r'R\$\s?(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)', past_text_lower)
                         valores_historico_limpos = [v.replace('.', '').replace(',', '.') for v in valor_encontrado_historico]
