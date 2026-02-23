@@ -173,29 +173,32 @@ async def start_monitoring():
                     pass
             
             # --- DEDUPLICAÇÃO NO CANAL DESTINO ---
-            # Extraímos o título real do produto via scraper (se houver link) ou usamos o link/primeira linha como titulo alternativo
-            from scraper import extract_price, fetch_product_metadata
+            # Tenta buscar o título exato via IA para evitar falsos positivos
+            from rewriter import extrair_nome_produto
+            titulo_real = await extrair_nome_produto(mensagem_texto)
             
             link_match = re.search(r'(https?://[^\s]+)', mensagem_texto)
-            titulo_real = ""
-            referencia = ""
+            referencia = link_match.group(1).split('?')[0] if link_match else ""
             
-            if link_match:
-                referencia = link_match.group(1).split('?')[0] # Pega o link sem parâmetros para fallback
-                
-                try:
-                    metadata = await fetch_product_metadata(referencia)
-                    if metadata and metadata.get("title"):
-                        titulo_real = metadata["title"].strip()
-                except Exception as e:
-                    print(f"⚠️ Erro ao resgatar título real para deduplicação no LP: {e}")
+            # Se a IA por algum motivo falhou em extrair um título claro
+            if not titulo_real or titulo_real == "Oferta Desconhecida":
+                if referencia:
+                    # Se tiver link mas não tiver titulo, tenta resgatar por scraping em último caso
+                    from scraper import fetch_product_metadata
+                    try:
+                        metadata = await fetch_product_metadata(referencia)
+                        if metadata and metadata.get("title"):
+                            titulo_real = metadata["title"].strip()
+                    except Exception as e:
+                        print(f"⚠️ Erro no scraper de fallback no LP: {e}")
             
-            if not titulo_real:
+            # Se ainda assim não tiver, vai pra primeira linha
+            if not titulo_real or titulo_real == "Oferta Desconhecida":
                 if referencia:
                     titulo_real = referencia
                 else:
-                    titulo_real = mensagem_texto.split('\n')[0].strip()
-                    titulo_real = re.sub(r'[^\w\s]', '', titulo_real).strip().lower()[:50]
+                    primeira_linha = mensagem_texto.split('\n')[0].strip()
+                    titulo_real = re.sub(r'[^\w\s]', '', primeira_linha).strip().lower()[:50]
                 
             valor_orig = extract_price(mensagem_texto) or "0"
             valor_referencia_limpo = valor_orig.replace('.', '').replace(',', '.')
