@@ -2,6 +2,25 @@ import asyncio
 from monitor import start_monitoring
 from admin import start_admin_bot
 
+import sys
+
+class LoggerWriter:
+    def __init__(self, filename):
+        self.terminal = sys.stdout
+        self.log = open(filename, "a", encoding="utf-8")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+        self.log.flush()
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+sys.stdout = LoggerWriter("bot.log")
+sys.stderr = sys.stdout
+
 async def main():
     print("="*60)
     print("🤖 Bot Literalmente Promo - Sistema de Monitoramento + Controle")

@@ -68,6 +68,24 @@ async def cmd_start(message: Message):
 async def cmd_meuid(message: Message):
     await message.answer(f"Seu ID do Telegram é: <code>{message.from_user.id}</code>", parse_mode="HTML")
 
+from aiogram.types import FSInputFile
+
+@dp.message(Command("log"))
+async def cmd_log(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+        
+    log_path = "bot.log"
+    if not os.path.exists(log_path):
+        await message.answer("⚠️ Nenhum arquivo de log encontrado até o momento.")
+        return
+        
+    try:
+        log_file = FSInputFile(log_path)
+        await message.answer_document(document=log_file, caption="📄 Arquivo de log atual do bot.")
+    except Exception as e:
+        await message.answer(f"❌ Erro ao enviar log: {e}")
+
 @dp.message(Command("enviar"))
 async def cmd_enviar_shortcut(message: Message):
     if is_admin(message.from_user.id):
@@ -193,6 +211,8 @@ async def btn_buscar_kw(callback: CallbackQuery):
 @dp.callback_query(F.data == "add_kw_btn")
 async def btn_add_kw(callback: CallbackQuery):
     user_states[callback.from_user.id] = "esperando_kw"
+    # Salva o ID da mensagem do menu para podermos editá-la depois, se necessário
+    user_temp_data[callback.from_user.id] = {"menu_msg_id": callback.message.message_id}
     await callback.message.edit_text("➕ **Adicionar Keyword**\n\nDigite a nova palavra-chave (ou várias separadas por vírgula) no chat:")
     await callback.answer()
 
@@ -471,6 +491,26 @@ async def handle_text(message: Message):
             msg_parts.append("⚠️ Nenhuma keyword válida informada.")
             
         await message.answer("\n".join(msg_parts))
+        
+        # Apaga a mensagem digitada pelo usuário e a mensagem do prompt para reabrir o menu limpo
+        try:
+            await message.delete()
+            menu_msg_id = user_temp_data.get(message.from_user.id, {}).get("menu_msg_id")
+            if menu_msg_id:
+                await message.bot.delete_message(chat_id=message.chat.id, message_id=menu_msg_id)
+        except:
+            pass
+            
+        # Reabre o menu chamando a função recriando um falso callback
+        from aiogram.types import CallbackQuery, User
+        fake_cb = CallbackQuery(
+            id="0",
+            from_user=message.from_user,
+            chat_instance="0",
+            message=message
+        )
+        fake_cb.message = await message.answer("Carregando...")
+        await menu_keywords(fake_cb)
         user_states[message.from_user.id] = None
 
     elif estado == "esperando_busca_kw":
@@ -710,7 +750,7 @@ async def tratar_aprovacao_manual(callback: CallbackQuery):
         await callback.answer()
     elif acao == "aprovar":
         await callback.answer("✅ Aprovada!")
-        await post_queue.put((oferta["texto"], oferta["media"], None))
+        await post_queue.put((oferta["texto"], oferta["media"], None, oferta.get("source_url")))
         await callback.message.edit_caption(caption="✅ **APROVADA**", reply_markup=None)
         ofertas_pendentes_admin[item_id] = None
     else:
