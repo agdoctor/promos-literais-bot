@@ -678,13 +678,13 @@ async def handle_text(message: Message):
             
         # Reabre o menu chamando a função recriando um falso callback
         from aiogram.types import CallbackQuery, User
+        msg_carregando = await message.answer("Carregando...")
         fake_cb = CallbackQuery(
             id="0",
             from_user=message.from_user,
             chat_instance="0",
-            message=message
+            message=msg_carregando
         )
-        fake_cb.message = await message.answer("Carregando...")
         await menu_keywords(fake_cb)
         user_states[message.from_user.id] = None
 
@@ -741,8 +741,8 @@ async def handle_text(message: Message):
             pass
             
         from aiogram.types import CallbackQuery
-        fake_cb = CallbackQuery(id="0", from_user=message.from_user, chat_instance="0", message=message)
-        fake_cb.message = await message.answer("Carregando...")
+        msg_carregando = await message.answer("Carregando...")
+        fake_cb = CallbackQuery(id="0", from_user=message.from_user, chat_instance="0", message=msg_carregando)
         await menu_neg_keywords(fake_cb)
         user_states[message.from_user.id] = None
 
