@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import config
 from config import BOT_TOKEN
 import database
-from database import add_canal, get_canais, remove_canal, add_keyword, get_keywords, remove_keyword, get_config, set_config, is_admin, add_admin, get_admins, remove_admin, get_active_sorteios, create_sorteio, finalize_sorteio
+from database import add_canal, get_canais, remove_canal, add_keyword, get_keywords, remove_keyword, get_config, set_config, is_admin, add_admin, get_admins, remove_admin, get_active_sorteios, create_sorteio, finalize_sorteio, get_negative_keywords, add_negative_keyword, remove_negative_keyword
 import os
 import sys
 import asyncio
@@ -27,6 +27,7 @@ def get_main_keyboard():
     builder.button(text="🔗 Criar Oferta via Link", callback_data="menu_criar_link")
     builder.button(text="📺 Gerenciar Canais", callback_data="menu_canais")
     builder.button(text="🔑 Gerenciar Keywords", callback_data="menu_keywords")
+    builder.button(text="🚫 Keywords Negativas", callback_data="menu_neg_keywords")
     builder.button(text="⚙️ Configurações Gerais", callback_data="menu_config")
     builder.button(text="👥 Gerenciar Admins", callback_data="menu_admins")
     builder.button(text="🎁 Gerenciar Sorteios", callback_data="menu_sorteios")
@@ -124,6 +125,115 @@ async def cmd_reiniciar(message: Message):
     except: pass
     
     os.execv(sys.executable, ['python'] + sys.argv)
+
+async def start_copiar_post_telegram(message: Message):
+    link = message.text.strip()
+    msg_status = await message.answer("🔍 Buscando postagem no Telegram...")
+    try:
+        import re
+        match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', link)
+        if not match:
+            await msg_status.edit_text("❌ Link do Telegram inválido. Use o formato t.me/canal/123")
+            return
+            
+        channel_or_id = match.group(1)
+        msg_id = int(match.group(2))
+        
+        if channel_or_id.isdigit():
+            channel_or_id = int(f"-100{channel_or_id}")
+            
+        from monitor import client as telethon_client
+        if not telethon_client.is_connected():
+            await telethon_client.connect()
+            
+        telethon_msgs = await telethon_client.get_messages(channel_or_id, ids=[msg_id])
+        if not telethon_msgs or not telethon_msgs[0]:
+            await msg_status.edit_text("❌ Não foi possível encontrar a mensagem. Verifique se o bot de monitoramento tem acesso ao canal.")
+            return
+            
+        tg_msg = telethon_msgs[0]
+        from monitor import base_downloads_path, post_queue, ofertas_pendentes_admin
+        from watermark import apply_watermark
+        from links import process_and_replace_links
+        from rewriter import reescrever_promocao
+        from config import get_config
+        import os
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+        
+        mensagem_texto = tg_msg.raw_text or ""
+        if not mensagem_texto and not tg_msg.media:
+             await msg_status.edit_text("❌ Mensagem vazia ou não suportada.")
+             return
+             
+        await msg_status.edit_text("⏬ Baixando mídia e reescrevendo cópia com IA...")
+        
+        media_path = None
+        if tg_msg.media:
+            try:
+                media_path = await tg_msg.download_media(file=base_downloads_path + os.path.sep)
+                if media_path:
+                    try:
+                        media_path = apply_watermark(media_path)
+                    except: pass
+            except Exception as e:
+                print(f"Erro ao baixar midia do post copiado: {e}")
+                
+        if not media_path:
+             from links import extract_urls
+             urls_detectadas = extract_urls(mensagem_texto)
+             if urls_detectadas:
+                 from scraper import fetch_product_metadata
+                 meta_fallback = await fetch_product_metadata(urls_detectadas[0])
+                 media_path = meta_fallback.get("local_image_path")
+                 if media_path:
+                     try: media_path = apply_watermark(media_path)
+                     except: pass
+                     
+        texto_com_placeholders, placeholder_map = await process_and_replace_links(mensagem_texto)
+        texto_reescrito = await reescrever_promocao(texto_com_placeholders)
+        
+        texto_final = texto_reescrito
+        if placeholder_map:
+            for placeholder, final_url in placeholder_map.items():
+                if final_url is None:
+                    texto_final = texto_final.replace(placeholder, "")
+                else:
+                    botao_html = f"🛒 <a href='{final_url}'>Pegar promoção</a>"
+                    texto_final = texto_final.replace(placeholder, botao_html)
+                    
+        import re as re_mod
+        texto_final = re_mod.sub(r'\[LINK_\d+\]', '', texto_final)
+        
+        assinatura = get_config("assinatura")
+        if assinatura:
+            texto_final += f"\n\n{assinatura}"
+            
+        await msg_status.delete()
+        
+        ofertas_pendentes_admin.append({"texto": texto_final, "media": media_path, "source_url": link})
+        item_id = len(ofertas_pendentes_admin) - 1
+        
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Postar", callback_data=f"aprovar_{item_id}"),
+                InlineKeyboardButton(text="✏️ Editar", callback_data=f"editar_{item_id}"),
+                InlineKeyboardButton(text="❌ Descartar", callback_data=f"recusar_{item_id}")
+            ]
+        ])
+        
+        msg_amostra = f"**NOVA OFERTA (VIA LINK DO TELEGRAM)!**\n\n{texto_final}"
+        
+        if media_path:
+            photo = FSInputFile(media_path)
+            try:
+                await message.answer_photo(photo=photo, caption=msg_amostra, reply_markup=markup, parse_mode="HTML")
+            except:
+                await message.answer_photo(photo=photo, caption=msg_amostra[:1024], reply_markup=markup)
+        else:
+            await message.answer(text=msg_amostra, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+
+    except Exception as e:
+        await msg_status.edit_text(f"❌ Erro ao copiar postagem: {e}")
 
 async def start_criar_oferta_msg(message: Message):
     user_states[message.from_user.id] = "esperando_link_criacao"
@@ -237,6 +347,52 @@ async def del_kw(callback: CallbackQuery):
     remove_keyword(kw)
     await callback.answer(f"Keyword '{kw}' removida!")
     await menu_keywords(callback) 
+
+# --- NEGATIVE KEYWORDS ---
+@dp.callback_query(F.data == "menu_neg_keywords")
+async def menu_neg_keywords(callback: CallbackQuery):
+    kws = get_negative_keywords()
+    
+    texto_kws = "\n".join([f"- {k}" for k in kws[:100]])
+    if len(kws) > 100:
+        texto_kws += f"\n... (e mais {len(kws)-100} palavras. Use a busca!)"
+        
+    texto = "🚫 **Keywords Negativas:**\n*(O bot ignorará ofertas que contenham essas palavras)*\n\n" 
+    texto += texto_kws
+    texto += "\n\nPara buscar, remover ou adicionar, use os botões abaixo ou digite no chat."
+    
+    builder = InlineKeyboardBuilder()
+    for k in kws[:90]:
+        builder.button(text=f"❌ {k}", callback_data=f"delnkw_{k}")
+    builder.button(text="➕ Adicionar Negativa", callback_data="add_nkw_btn")
+    builder.button(text="🔍 Buscar", callback_data="buscar_nkw")
+    builder.button(text="🔙 Voltar", callback_data="voltar_main")
+    
+    sizes = [2] * ((len(kws[:90]) + 1) // 2) + [1, 1, 1]
+    builder.adjust(*sizes)
+    
+    await callback.message.edit_text(texto, reply_markup=builder.as_markup(), parse_mode="Markdown")
+    user_states[callback.from_user.id] = "esperando_nkw"
+
+@dp.callback_query(F.data == "buscar_nkw")
+async def btn_buscar_nkw(callback: CallbackQuery):
+    user_states[callback.from_user.id] = "esperando_busca_nkw"
+    await callback.message.edit_text("🔍 **Buscar Keyword Negativa**\n\nDigite a palavra que deseja procurar na sua lista:")
+    await callback.answer()
+
+@dp.callback_query(F.data == "add_nkw_btn")
+async def btn_add_nkw(callback: CallbackQuery):
+    user_states[callback.from_user.id] = "esperando_nkw"
+    user_temp_data[callback.from_user.id] = {"menu_msg_id": callback.message.message_id}
+    await callback.message.edit_text("➕ **Adicionar Keyword Negativa**\n\nDigite a palavra-chave negativa (ou várias separadas por vírgula) no chat:")
+    await callback.answer()
+
+@dp.callback_query(F.data.startswith("delnkw_"))
+async def del_nkw(callback: CallbackQuery):
+    kw = callback.data.split("_", 1)[1]
+    remove_negative_keyword(kw)
+    await callback.answer(f"Keyword '{kw}' removida!")
+    await menu_neg_keywords(callback) 
 
 # --- CONFIGURAÇÕES ---
 @dp.callback_query(F.data == "menu_config")
@@ -439,11 +595,15 @@ async def handle_text(message: Message):
         estado = user_states.get(user_id)
         
         if estado is None:
-            # Tenta detectar se o usuário mandou um link direto da Amazon ou ML
+            # Tenta detectar se o usuário mandou um link direto da Amazon, ML ou Telegram
             texto = message.text.lower() if message.text else ""
-            if any(domain in texto for domain in ["amazon.com.br", "amzlink.to", "amzn.to", "mercadolivre.com", "mlb.sh"]):
-                print(f"🔗 Link auto-detectado do admin: {message.text}")
-                await start_criar_oferta_msg(message)
+            if any(domain in texto for domain in ["amazon.com.br", "amzlink.to", "amzn.to", "mercadolivre.com", "mlb.sh", "t.me"]):
+                if "t.me" in texto:
+                    print(f"🔗 Link de Telegram auto-detectado do admin: {message.text}")
+                    await start_copiar_post_telegram(message)
+                else:
+                    print(f"🔗 Link auto-detectado do admin: {message.text}")
+                    await start_criar_oferta_msg(message)
                 estado = user_states.get(user_id)
     except Exception as e:
         print(f"❌ Erro no início do handle_text: {e}")
@@ -550,6 +710,64 @@ async def handle_text(message: Message):
         
         await message.answer(texto, reply_markup=builder.as_markup(), parse_mode="Markdown")
         user_states[message.from_user.id] = "esperando_kw"
+
+    elif estado == "esperando_nkw":
+        kws = [k.strip() for k in message.text.lower().split(",") if k.strip()]
+        adicionadas = []
+        ja_existem = []
+        for kw in kws:
+            if add_negative_keyword(kw):
+                adicionadas.append(kw)
+            else:
+                ja_existem.append(kw)
+        
+        msg_parts = []
+        if adicionadas:
+            msg_parts.append(f"✅ Keyword(s) negativa(s) adicionada(s): `{', '.join(adicionadas)}`")
+        if ja_existem:
+            msg_parts.append(f"⚠️ Já cadastrada(s): `{', '.join(ja_existem)}`")
+            
+        if not msg_parts:
+            msg_parts.append("⚠️ Nenhuma keyword válida informada.")
+            
+        await message.answer("\n".join(msg_parts))
+        
+        try:
+            await message.delete()
+            menu_msg_id = user_temp_data.get(message.from_user.id, {}).get("menu_msg_id")
+            if menu_msg_id:
+                await message.bot.delete_message(chat_id=message.chat.id, message_id=menu_msg_id)
+        except:
+            pass
+            
+        from aiogram.types import CallbackQuery
+        fake_cb = CallbackQuery(id="0", from_user=message.from_user, chat_instance="0", message=message)
+        fake_cb.message = await message.answer("Carregando...")
+        await menu_neg_keywords(fake_cb)
+        user_states[message.from_user.id] = None
+
+    elif estado == "esperando_busca_nkw":
+        busca = message.text.strip().lower()
+        kws = get_negative_keywords()
+        resultados = [k for k in kws if busca in k.lower()]
+        
+        if resultados:
+            texto = f"🔍 **Resultados para:** `{busca}`\n\n" + "\n".join([f"- {k}" for k in resultados[:100]])
+            texto += "\n\nPara remover, clique abaixo. Para adicionar novas, digite no chat."
+        else:
+            texto = f"🔍 **Nenhum resultado para:** `{busca}`\n\nPara adicionar como nova keyword, basta digitar ela no chat."
+            
+        builder = InlineKeyboardBuilder()
+        for k in resultados[:90]:
+            builder.button(text=f"❌ {k}", callback_data=f"delnkw_{k}")
+        builder.button(text="🔍 Nova Busca", callback_data="buscar_nkw")
+        builder.button(text="🔙 Voltar p/ Negativas", callback_data="menu_neg_keywords")
+        
+        sizes = [2] * ((len(resultados[:90]) + 1) // 2) + [1, 1]
+        builder.adjust(*sizes)
+        
+        await message.answer(texto, reply_markup=builder.as_markup(), parse_mode="Markdown")
+        user_states[message.from_user.id] = "esperando_nkw"
 
     elif estado == "esperando_preco":
         try:

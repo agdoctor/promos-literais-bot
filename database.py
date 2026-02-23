@@ -24,6 +24,14 @@ def init_db():
         )
     ''')
     
+    # Tabela para palavras-chave negativas (ignorar)
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS negative_keywords (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            palavra TEXT UNIQUE NOT NULL
+        )
+    ''')
+    
     # Tabela para configurações gerais do bot (Chave -> Valor)
     c.execute('''
         CREATE TABLE IF NOT EXISTS config (
@@ -135,6 +143,34 @@ def remove_keyword(kw: str):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM keywords WHERE palavra = ?", (kw.strip().lower(),))
+    conn.commit()
+    conn.close()
+
+# --- NEGATIVE KEYWORDS ---
+def get_negative_keywords():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT palavra FROM negative_keywords ORDER BY palavra ASC")
+    kws = [row[0] for row in c.fetchall()]
+    conn.close()
+    return kws
+
+def add_negative_keyword(kw: str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO negative_keywords (palavra) VALUES (?)", (kw.strip().lower(),))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+def remove_negative_keyword(kw: str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM negative_keywords WHERE palavra = ?", (kw.strip().lower(),))
     conn.commit()
     conn.close()
 

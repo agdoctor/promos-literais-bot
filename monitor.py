@@ -3,7 +3,7 @@ import os
 import re
 from telethon import TelegramClient, events
 from config import API_ID, API_HASH, TARGET_CHANNEL
-from database import get_canais, get_keywords, get_config, check_duplicate, add_to_history
+from database import get_canais, get_keywords, get_config, check_duplicate, add_to_history, get_negative_keywords
 
 from rewriter import reescrever_promocao, extrair_nome_produto
 from links import process_and_replace_links, extract_urls
@@ -156,6 +156,14 @@ async def start_monitoring():
             # Se a mensagem for só mídia ou mensagem vazia ignora
             if not mensagem_texto and not event.message.media:
                 return
+
+            # Verifica keywords negativas
+            negative_keywords = get_negative_keywords()
+            if negative_keywords:
+                has_negative = any(n_kw.lower() in mensagem_texto.lower() for n_kw in negative_keywords)
+                if has_negative:
+                    print(f"🚫 Ignorado: A mensagem contém uma keyword negativa.")
+                    return
                 
             # Verifica as keywords (se a lista não for vazia)
             keywords = get_keywords()
@@ -194,11 +202,12 @@ async def start_monitoring():
                 source_url = f"https://t.me/c/{str(event.chat_id).replace('-100', '')}/{event.message.id}"
                 
             if admin_id_str:
-                try:
-                    msg_info = f"🔎 **Nova oferta detectada!**\nCanal: `{event.chat.title or event.chat_id}`\n📥 [Postagem Original]({source_url})\n⏳ Processando publicação..."
-                    await bot.send_message(chat_id=int(admin_id_str), text=msg_info, parse_mode="Markdown", disable_web_page_preview=True)
-                except:
-                    pass
+                pass
+                # try:
+                #     msg_info = f"🔎 **Nova oferta detectada!**\nCanal: `{event.chat.title or event.chat_id}`\n📥 [Postagem Original]({source_url})\n⏳ Processando publicação..."
+                #     await bot.send_message(chat_id=int(admin_id_str), text=msg_info, parse_mode="Markdown", disable_web_page_preview=True)
+                # except:
+                #     pass
             
             # --- DEDUPLICAÇÃO NO CANAL DESTINO ---
             # Tenta buscar o título exato via IA para evitar falsos positivos
@@ -396,10 +405,11 @@ async def start_monitoring():
             print(f"❌ Erro ao processar mensagem: {e}")
             admin_id_str = get_config("admin_id")
             if admin_id_str:
-                try:
-                    await bot.send_message(chat_id=int(admin_id_str), text=f"⚠️ **Erro no Monitor (Literalmente):**\n`{str(e)[:500]}`", parse_mode="Markdown")
-                except:
-                    pass
+                pass
+                # try:
+                #     await bot.send_message(chat_id=int(admin_id_str), text=f"⚠️ **Erro no Monitor (Literalmente):**\n`{str(e)[:500]}`", parse_mode="Markdown")
+                # except:
+                #     pass
 
     # Loop de reconexão persistente para evitar quedas por [Errno 104] (Connection reset by peer)
     while True:
