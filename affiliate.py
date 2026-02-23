@@ -137,7 +137,22 @@ async def convert_aliexpress_to_affiliate(original_url: str) -> str:
     """
     from config import ALI_APP_KEY, ALI_APP_SECRET, ALI_TRACKING_ID
     
-    clean_url = clean_tracking_params(original_url)
+    # Normalizar URL: se for um link sujo de moedas (coin-index) com productIds na URL, a gente limpa
+    clean_url = original_url
+    if "productIds=" in original_url:
+        match = re.search(r'productIds=(\d+)', original_url)
+        if match:
+            pid = match.group(1)
+            clean_url = f"https://pt.aliexpress.com/item/{pid}.html"
+            print(f"🧹 URL suja do AliExpress detectada no LP. ID {pid} isolado: {clean_url}")
+    elif "item/" in original_url:
+        match = re.search(r'item/(\d+)\.html', original_url)
+        if match:
+            pid = match.group(1)
+            clean_url = f"https://pt.aliexpress.com/item/{pid}.html"
+            print(f"🧹 URL AliExpress limpa no LP: {clean_url}")
+            
+    clean_url = clean_tracking_params(clean_url)
     
     if not ALI_APP_KEY or not ALI_APP_SECRET or not ALI_TRACKING_ID:
         print("⚠️ Credenciais da API AliExpress não configuradas. Usando gerador genérico de deeplink no LP.")
