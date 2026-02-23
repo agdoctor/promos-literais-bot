@@ -173,9 +173,14 @@ async def start_monitoring():
                     pass
             
             # --- FILTRO DE COOLDOWN / DUPLICATAS ---
-            # Extraímos o título e valor da mensagem ORIGINAL para checar se já foi postado algo similar
+            # Extraímos o link do produto OU título da mensagem ORIGINAL para checar se já foi postado algo similar
             from scraper import extract_price
-            titulo_orig = mensagem_texto.split('\n')[0].strip()
+            link_match = re.search(r'(https?://[^\s]+)', mensagem_texto)
+            if link_match:
+                titulo_orig = link_match.group(1).split('?')[0] # Usa o link sem parâmetros no lugar do título para evitar falsos positivos
+            else:
+                titulo_orig = mensagem_texto.split('\n')[0].strip()
+                
             valor_orig = extract_price(mensagem_texto) or "0"
             
             cooldown_mins = int(get_config("cooldown_minutos") or "60")
