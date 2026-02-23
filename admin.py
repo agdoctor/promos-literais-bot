@@ -30,8 +30,23 @@ def get_main_keyboard():
     builder.button(text="⚙️ Configurações Gerais", callback_data="menu_config")
     builder.button(text="👥 Gerenciar Admins", callback_data="menu_admins")
     builder.button(text="🎁 Gerenciar Sorteios", callback_data="menu_sorteios")
+    builder.button(text="🤖 Comandos Ativos", callback_data="mostrar_comandos")
     builder.adjust(1)
     return builder.as_markup()
+
+@dp.callback_query(F.data == "mostrar_comandos")
+async def mostrar_comandos_handler(callback: CallbackQuery):
+    texto = (
+        "🤖 **Comandos Ativos do Bot:**\n\n"
+        "🔹 `/start` - Abre o painel principal interativo\n"
+        "🔹 `/enviar` - Atalho para extrair e criar uma oferta\n"
+        "🔹 `/log` - Recebe o arquivo `bot.log` com logs do terminal\n"
+        "🔹 `/meuid` - Retorna o seu ID numérico do Telegram\n"
+    )
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🔙 Voltar", callback_data="voltar_main")
+    await callback.message.edit_text(texto, reply_markup=builder.as_markup(), parse_mode="Markdown")
+    await callback.answer()
 
 @dp.message(Command("start", "admin"))
 async def cmd_start(message: Message):
