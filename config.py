@@ -14,6 +14,11 @@ ML_AFFILIATE_COOKIE = os.getenv("ML_AFFILIATE_COOKIE")
 # Amazon Affiliate Tag
 AMAZON_TAG = os.getenv("AMAZON_TAG", "luiz4opromos-20")
 
+# AliExpress Affiliate
+ALI_APP_KEY = os.getenv("ALI_APP_KEY")
+ALI_APP_SECRET = os.getenv("ALI_APP_SECRET")
+ALI_TRACKING_ID = os.getenv("ALI_TRACKING_ID")
+
 # Proxy Configuration (Opcional - Recomendado para evitar 403)
 PROXY_URL = os.getenv("PROXY_URL")
 
