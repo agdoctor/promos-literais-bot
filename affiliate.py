@@ -131,6 +131,88 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
         print(f"⚠️ Erro ao gerar link de afiliado ML: {e}")
         return fallback_social_url
 
+async def convert_aliexpress_to_affiliate(original_url: str) -> str:
+    """
+    Converte um link do AliExpress para link de afiliado usando a API oficial (Open Platform).
+    """
+    from config import ALI_APP_KEY, ALI_APP_SECRET, ALI_TRACKING_ID
+    
+    clean_url = clean_tracking_params(original_url)
+    
+    if not ALI_APP_KEY or not ALI_APP_SECRET or not ALI_TRACKING_ID:
+        print("⚠️ Credenciais da API AliExpress não configuradas. Usando gerador genérico de deeplink no LP.")
+        if ALI_TRACKING_ID:
+            import urllib.parse
+            encoded_url = urllib.parse.quote(clean_url, safe='')
+            return f"https://s.click.aliexpress.com/deep_link.htm?aff_short_key={ALI_TRACKING_ID}&dl_target_url={encoded_url}"
+        return clean_url
+
+    
+    # Parâmetros obrigatórios da API TopClient AliExpress
+    params = {
+        "method": "aliexpress.affiliate.link.generate",
+        "app_key": ALI_APP_KEY,
+        "sign_method": "md5",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "format": "json",
+        "v": "2.0",
+        "promotion_link_type": "0",
+        "source_values": clean_url,
+        "tracking_id": ALI_TRACKING_ID
+    }
+    
+    # Ordenar parâmetros por chave
+    sorted_params = sorted(params.items())
+    
+    # Construir string base para a assinatura
+    query_string = ALI_APP_SECRET
+    for key, value in sorted_params:
+        query_string += f"{key}{value}"
+    query_string += ALI_APP_SECRET
+    
+    # Gerar a assinatura (MD5 em maiúsculas)
+    sign = hashlib.md5(query_string.encode('utf-8')).hexdigest().upper()
+    params['sign'] = sign
+    
+    try:
+        # A API oficial atende via POST ou GET
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.post('https://api-sg.aliexpress.com/sync', data=params)
+            
+            if res.status_code == 200:
+                data = res.json()
+                
+                # A estrutura de resposta padrão é:
+                # {"aliexpress_affiliate_link_generate_response": {"resp_result": {"result": {"promotion_links": {"promotion_link": [{"promotion_link": "..."}]}}}}}
+                response_body = data.get("aliexpress_affiliate_link_generate_response", {})
+                resp_result = response_body.get("resp_result", {})
+                
+                if resp_result.get("resp_code") == 200:
+                    result_obj = resp_result.get("result", {})
+                    promo_links_obj = result_obj.get("promotion_links", {})
+                    link_list = promo_links_obj.get("promotion_link", [])
+                    
+                    if link_list and len(link_list) > 0:
+                        aff_link = link_list[0].get("promotion_link")
+                        if aff_link:
+                            print(f"✅ Link AliExpress gerado: {aff_link}")
+                            return aff_link
+                else:
+                    print(f"❌ Erro na API AliExpress: {resp_result.get('resp_msg')}")
+            else:
+                print(f"❌ HTTP Erro AliExpress: {res.status_code}")
+                
+    except Exception as e:
+        print(f"⚠️ Erro ao se conectar com AliExpress: {e}")
+        
+    print("⚠️ Fallback: Retornando gerador genérico de deeplink do AliExpress.")
+    if ALI_TRACKING_ID:
+        import urllib.parse
+        encoded_url = urllib.parse.quote(clean_url, safe='')
+        return f"https://s.click.aliexpress.com/deep_link.htm?aff_short_key={ALI_TRACKING_ID}&dl_target_url={encoded_url}"
+        
+    return clean_url
+
 async def convert_to_affiliate(url: str) -> str:
     """
     Identifica a loja e aplica a lógica de conversão correspondente.
@@ -171,6 +253,10 @@ async def convert_to_affiliate(url: str) -> str:
         new_query = urlencode(params, doseq=True)
         return urlunparse(parsed._replace(query=new_query))
     
+    # AliExpress
+    if 'aliexpress.com' in domain:
+        return await convert_aliexpress_to_affiliate(url)
+        
     # Futuramente: Shopee, Magalu...
     
     return clean_tracking_params(url)
