@@ -172,7 +172,7 @@ async def start_monitoring():
                 except:
                     pass
             
-            # --- FILTRO DE COOLDOWN / DUPLICATAS ---
+            # --- DEDUPLICAÇÃO NO CANAL DESTINO ---
             # Extraímos o título real do produto via scraper (se houver link) ou usamos o link/primeira linha como titulo alternativo
             from scraper import extract_price, fetch_product_metadata
             
@@ -198,10 +198,62 @@ async def start_monitoring():
                     titulo_real = re.sub(r'[^\w\s]', '', titulo_real).strip().lower()[:50]
                 
             valor_orig = extract_price(mensagem_texto) or "0"
+            valor_referencia_limpo = valor_orig.replace('.', '').replace(',', '.')
             
-            cooldown_mins = int(get_config("cooldown_minutos") or "60")
-            if check_duplicate(titulo_real, valor_orig, window_minutes=cooldown_mins):
-                print(f"🛑 Oferta duplicada ignorada (Cooldown {cooldown_mins} min): Título Original detectado: {titulo_real} - R${valor_orig}")
+            # Busca no histórico recente do canal destino
+            print(f"🔍 Verificando duplicidade no canal de destino ({TARGET_CHANNEL})... Buscando: '{titulo_real}' e 'R$ {valor_orig}'")
+            oferta_duplicada = False
+            try:
+                # Retorna mensagens das últimas 1 hora (60 minutos) usando o telethon client iter_messages
+                from datetime import datetime, timedelta, timezone
+                time_threshold = datetime.now(timezone.utc) - timedelta(minutes=60)
+                
+                async for past_msg in client.iter_messages(TARGET_CHANNEL, offset_date=datetime.now(timezone.utc)):
+                    if past_msg.date < time_threshold:
+                        break # Só checa a última hora
+                    
+                    if past_msg.text:
+                        # Limpa o texto passado e o titulo real pesquisado
+                        past_text_lower = past_msg.text.lower()
+                        titulo_pesquisa_lower = titulo_real.lower()
+                        
+                        # Precisa achar palavras-chave do título e o valor exato no post do canal destino
+                        tokens_titulo = [t for t in titulo_pesquisa_lower.split() if len(t) > 3]
+                        
+                        # Match 1: O valor numérico precisa estar no post
+                        from scraper import extract_price
+                        # Regex para capturar todos os valores R$ no historico
+                        valor_encontrado_historico = re.findall(r'R\$\s?(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)', past_text_lower)
+                        valores_historico_limpos = [v.replace('.', '').replace(',', '.') for v in valor_encontrado_historico]
+                        
+                        teve_match_valor = valor_referencia_limpo in valores_historico_limpos
+                        teve_match_titulo = False
+                        
+                        if tokens_titulo:
+                            matches = sum(1 for t in tokens_titulo if t in past_text_lower)
+                            # Se pelo menos 50% dos tokens do produto alvo estiverem no post destino
+                            if matches / len(tokens_titulo) >= 0.5:
+                                teve_match_titulo = True
+                        else:
+                             if titulo_pesquisa_lower in past_text_lower:
+                                  teve_match_titulo = True
+                                  
+                        if teve_match_valor and teve_match_titulo:
+                            oferta_duplicada = True
+                            print(f"🛑 Post ignorado: Exatamente este produto '{titulo_real}' por R$ {valor_orig} já foi postado no canal de destino nos últimos 60 minutos.")
+                            
+                            admin_id_str = get_config("admin_id")
+                            if admin_id_str:
+                                try:
+                                    msg_info = f"🚫 **Post Ignorado por Duplicação no {TARGET_CHANNEL}**\nO produto *{titulo_real}* por R$ {valor_orig} já foi anunciado pelo robô há menos de 60 minutos."
+                                    await bot.send_message(chat_id=int(admin_id_str), text=msg_info, parse_mode="Markdown")
+                                except: pass
+                            break
+                            
+            except Exception as e:
+                print(f"⚠️ Erro ao verificar histórico do canal de destino: {e}")
+                
+            if oferta_duplicada:
                 return
             
             media_path = None
