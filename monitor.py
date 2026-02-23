@@ -5,8 +5,10 @@ from telethon import TelegramClient, events
 from config import API_ID, API_HASH, TARGET_CHANNEL
 from database import get_canais, get_keywords, get_config, check_duplicate, add_to_history
 
-from rewriter import reescrever_promocao
-from links import process_and_replace_links
+from rewriter import reescrever_promocao, extrair_nome_produto
+from links import process_and_replace_links, extract_urls
+from scraper import extract_price, fetch_product_metadata
+from datetime import datetime, timedelta, timezone
 from publisher import publish_deal, bot
 from watermark import apply_watermark
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
@@ -72,7 +74,6 @@ async def worker_queue():
             # Adiciona ao histórico para evitar duplicatas (usamos o texto final como base)
             # Título e valor são extraídos de forma simplificada para o histórico
             # No worker, temos o texto_final pronto.
-            from scraper import extract_price
             titulo_clean = texto_final.split('\n')[0].replace('🛒', '').strip()
             valor_clean = extract_price(texto_final) or "0"
             add_to_history(titulo_clean, valor_clean)
@@ -201,7 +202,6 @@ async def start_monitoring():
             
             # --- DEDUPLICAÇÃO NO CANAL DESTINO ---
             # Tenta buscar o título exato via IA para evitar falsos positivos
-            from rewriter import extrair_nome_produto
             titulo_real = await extrair_nome_produto(mensagem_texto)
             
             link_match = re.search(r'(https?://[^\s]+)', mensagem_texto)
@@ -211,7 +211,6 @@ async def start_monitoring():
             if not titulo_real or titulo_real == "Oferta Desconhecida":
                 if referencia:
                     # Se tiver link mas não tiver titulo, tenta resgatar por scraping em último caso
-                    from scraper import fetch_product_metadata
                     try:
                         metadata = await fetch_product_metadata(referencia)
                         if metadata and metadata.get("title"):
@@ -227,7 +226,6 @@ async def start_monitoring():
                     primeira_linha = mensagem_texto.split('\n')[0].strip()
                     titulo_real = re.sub(r'[^\w\s]', '', primeira_linha).strip().lower()[:50]
                 
-            from scraper import extract_price
             valor_orig = extract_price(mensagem_texto) or "0"
             valor_referencia_limpo = valor_orig.replace('.', '').replace(',', '.')
             
@@ -236,7 +234,6 @@ async def start_monitoring():
             oferta_duplicada = False
             try:
                 # Retorna mensagens das últimas 1 hora (60 minutos) usando o telethon client iter_messages
-                from datetime import datetime, timedelta, timezone
                 time_threshold = datetime.now(timezone.utc) - timedelta(minutes=60)
                 
                 async for past_msg in client.iter_messages(TARGET_CHANNEL, offset_date=datetime.now(timezone.utc)):
@@ -310,10 +307,8 @@ async def start_monitoring():
             # --- FAIXA DE SEGURANÇA: Se não tem mídia, tenta extrair do link ---
             if not media_path:
                 print("🔍 Mídia não encontrada na mensagem, tentando extrair do link...")
-                from links import extract_urls
                 urls_detectadas = extract_urls(mensagem_texto)
                 if urls_detectadas:
-                    from scraper import fetch_product_metadata
                     # Tenta o primeiro link detectado
                     meta_fallback = await fetch_product_metadata(urls_detectadas[0])
                     media_path = meta_fallback.get("local_image_path")
