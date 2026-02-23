@@ -135,8 +135,11 @@ async def convert_aliexpress_to_affiliate(original_url: str) -> str:
     """
     Converte um link do AliExpress para link de afiliado usando a API oficial (Open Platform).
     """
-    from config import ALI_APP_KEY, ALI_APP_SECRET, ALI_TRACKING_ID
-    
+    import config
+    ALI_APP_KEY = config.ALI_APP_KEY
+    ALI_APP_SECRET = config.ALI_APP_SECRET
+    ALI_TRACKING_ID = config.ALI_TRACKING_ID
+
     # Normalizar URL: se for um link sujo de moedas (coin-index) com productIds na URL, a gente limpa
     clean_url = original_url
     if "productIds=" in original_url:
