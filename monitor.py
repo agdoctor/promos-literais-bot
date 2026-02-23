@@ -173,19 +173,35 @@ async def start_monitoring():
                     pass
             
             # --- FILTRO DE COOLDOWN / DUPLICATAS ---
-            # Extraímos o link do produto OU título da mensagem ORIGINAL para checar se já foi postado algo similar
-            from scraper import extract_price
+            # Extraímos o título real do produto via scraper (se houver link) ou usamos o link/primeira linha como titulo alternativo
+            from scraper import extract_price, fetch_product_metadata
+            
             link_match = re.search(r'(https?://[^\s]+)', mensagem_texto)
+            titulo_real = ""
+            referencia = ""
+            
             if link_match:
-                titulo_orig = link_match.group(1).split('?')[0] # Usa o link sem parâmetros no lugar do título para evitar falsos positivos
-            else:
-                titulo_orig = mensagem_texto.split('\n')[0].strip()
+                referencia = link_match.group(1).split('?')[0] # Pega o link sem parâmetros para fallback
+                
+                try:
+                    metadata = await fetch_product_metadata(referencia)
+                    if metadata and metadata.get("title"):
+                        titulo_real = metadata["title"].strip()
+                except Exception as e:
+                    print(f"⚠️ Erro ao resgatar título real para deduplicação no LP: {e}")
+            
+            if not titulo_real:
+                if referencia:
+                    titulo_real = referencia
+                else:
+                    titulo_real = mensagem_texto.split('\n')[0].strip()
+                    titulo_real = re.sub(r'[^\w\s]', '', titulo_real).strip().lower()[:50]
                 
             valor_orig = extract_price(mensagem_texto) or "0"
             
             cooldown_mins = int(get_config("cooldown_minutos") or "60")
-            if check_duplicate(titulo_orig, valor_orig, window_minutes=cooldown_mins):
-                print(f"🛑 Oferta duplicada ignorada (Cooldown {cooldown_mins} min): {titulo_orig} - {valor_orig}")
+            if check_duplicate(titulo_real, valor_orig, window_minutes=cooldown_mins):
+                print(f"🛑 Oferta duplicada ignorada (Cooldown {cooldown_mins} min): Título Original detectado: {titulo_real} - R${valor_orig}")
                 return
             
             media_path = None
