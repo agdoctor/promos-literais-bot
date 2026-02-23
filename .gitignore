@@ -1,6 +1,6 @@
 .env
 square_env.txt
-# *.db
+*.db
 *.session
 *.session-journal
 __pycache__/
