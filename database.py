@@ -114,7 +114,7 @@ def remove_canal(nome: str):
 def get_keywords():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT palavra FROM keywords")
+    c.execute("SELECT palavra FROM keywords ORDER BY palavra ASC")
     kws = [row[0] for row in c.fetchall()]
     conn.close()
     return kws
