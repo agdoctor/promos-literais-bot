@@ -153,12 +153,22 @@ async def handle_index(request):
                 </div>
             </div>
             <div id="tab-enviar" class="tab-content">
-                <div class="card" id="step-1">
-                    <div class="card-title">🔗 Colar Link</div>
-                    <p style="font-size:13px; color:var(--text-dim)">Cole o link do produto da Amazon, Mercado Livre, Shopee, etc.</p>
-                    <div class="input-group">
-                        <input type="text" id="promo-url" placeholder="Cole aqui o link do produto da Amazon, Shopee, etc...">
-                        <button class="primary" onclick="startScrape()">Continuar ➔</button>
+                <div style="display:flex; flex-direction:column; gap:15px;" id="step-1">
+                    <div class="card" style="margin-bottom:0px;">
+                        <div class="card-title">🔗 Onde está a oferta?</div>
+                        <p style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">Opção 1: Cole o link de uma loja (Amazon, Mercado Livre, Shopee, etc.) para criarmos a postagem do zero.</p>
+                        <div class="input-group">
+                            <input type="text" id="promo-url" placeholder="https://amazon.com.br/...">
+                            <button class="primary" onclick="startScrape()">Continuar ➔</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="margin-top:0px;">
+                        <p style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">Opção 2: Cole o link de um post de outro canal do Telegram para convertermos a mídia e o texto com IA.</p>
+                        <div class="input-group">
+                            <input type="text" id="tg-url" placeholder="https://t.me/promocoes/1234">
+                            <button class="primary" onclick="startTgScrape()" style="background:var(--accent); color:#fff">Importar ➔</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -820,10 +830,70 @@ async def handle_post_offer(request):
         if img_path and os.path.exists(img_path):
             img_path = apply_watermark(img_path)
 
-        # Postar DIRETAMENTE e pegar link (para retorno imediato ao painel)
-        post_link = await publish_deal(text_base, img_path)
+        from publisher import publish_deal
+        await publish_deal(text_base, img_path, None, orig_url)
+        return web.json_response({"success": True})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": str(e)}, status=500)
+
+async def handle_scrape_tg(request):
+    if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
+    try:
+        data = await request.json()
+        link = data.get("url")
+        if not link: return web.json_response({"error": "URL missing"}, status=400)
         
-        return web.json_response({"success": True, "link": post_link})
+        import re
+        match = re.search(r't\.me/(?:c/)?([^/]+)/(\d+)', link)
+        if not match: return web.json_response({"error": "Link de Telegram inválido (use t.me/canal/123)"}, status=400)
+            
+        channel_or_id = match.group(1)
+        msg_id = int(match.group(2))
+        
+        if channel_or_id.isdigit():
+            channel_or_id = int(f"-100{channel_or_id}")
+            
+        from monitor import client as telethon_client
+        if not telethon_client.is_connected():
+            await telethon_client.connect()
+            
+        telethon_msgs = await telethon_client.get_messages(channel_or_id, ids=[msg_id])
+        if not telethon_msgs or not telethon_msgs[0]:
+            return web.json_response({"error": "Mensagem não encontrada. O bot de monitoramento tem acesso ao canal?"}, status=404)
+            
+        tg_msg = telethon_msgs[0]
+        texto_original = tg_msg.text or ""
+        
+        local_media_path = None
+        if tg_msg.media:
+            from monitor import base_downloads_path
+            import os
+            local_media_path = await telethon_client.download_media(tg_msg, file=base_downloads_path + os.path.sep)
+            
+        return web.json_response({
+            "text": texto_original,
+            "media_path": local_media_path
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": str(e)}, status=500)
+
+async def handle_rewrite_tg(request):
+    if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
+    try:
+        data = await request.json()
+        text = data.get("text")
+        
+        from links import process_and_replace_links
+        from rewriter import reescrever_promocao
+        
+        texto_com_nossos_links, _ = await process_and_replace_links(text)
+        texto_reescrito = await reescrever_promocao(texto_com_nossos_links)
+        
+        return web.json_response({"text": texto_reescrito})
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -846,6 +916,8 @@ async def start_web_server():
     app.router.add_get('/api/image', handle_image_get)
     app.router.add_post('/api/watermark', handle_watermark_post)
     app.router.add_post('/api/scrape', handle_scrape)
+    app.router.add_post('/api/scrape_tg', handle_scrape_tg)
+    app.router.add_post('/api/rewrite_tg', handle_rewrite_tg)
     app.router.add_post('/api/generate_text', handle_generate_text)
     app.router.add_post('/api/preview_links', handle_preview_links)
     app.router.add_post('/api/post_offer', handle_post_offer)
