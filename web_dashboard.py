@@ -32,65 +32,82 @@ async def handle_index(request):
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
         <style>
             :root {{
-                --bg-main: #0d1117; --bg-sec: #161b22; --bg-card: #21262d;
-                --border: #30363d; --text: #e6edf3; --text-dim: #8b949e;
-                --accent: #58a6ff; --success: #238636; --error: #da3633;
+                --bg-main: #1c0e15;
+                --bg-sec: #29121d;
+                --bg-card: #371726;
+                --border: #521d36;
+                --text: #fbe5ef;
+                --text-dim: #cca8ba;
+                --accent: #ff66a3;
+                --success: #d42a78;
+                --error: #e83a54;
             }}
             body {{
                 background: var(--bg-main); color: var(--text);
-                font-family: sans-serif; margin: 0; padding: 0;
+                font-family: 'Inter', sans-serif; margin: 0; padding: 0;
                 display: flex; flex-direction: column; height: 100vh; overflow: hidden;
             }}
             #navbar {{
-                display: flex; background: var(--bg-sec); border-bottom: 1px solid var(--border);
-                overflow-x: auto; flex-shrink: 0; z-index: 100;
+                display: flex; background: var(--bg-sec); border-bottom: 2px solid var(--accent);
+                overflow-x: auto; flex-shrink: 0; z-index: 100; box-shadow: 0 2px 8px rgba(255,102,163,0.15);
             }}
-            #navbar::-webkit-scrollbar {{ height: 8px; }}
+            #navbar::-webkit-scrollbar {{ height: 6px; }}
             #navbar::-webkit-scrollbar-thumb {{ background: var(--accent); border-radius: 10px; }}
             /* Global Scrollbar */
-            ::-webkit-scrollbar {{ width: 10px; height: 10px; }}
+            ::-webkit-scrollbar {{ width: 8px; height: 8px; }}
             ::-webkit-scrollbar-track {{ background: var(--bg-main); }}
             ::-webkit-scrollbar-thumb {{ background: var(--accent); border-radius: 10px; border: 2px solid var(--bg-main); }}
-            ::-webkit-scrollbar-thumb:hover {{ background: #79b6ff; }}
+            ::-webkit-scrollbar-thumb:hover {{ background: #ff85b6; }}
             .nav-item {{
-                padding: 12px 15px; color: var(--text-dim); cursor: pointer; white-space: nowrap;
-                font-size: 14px; border-bottom: 2px solid transparent; transition: 0.2s;
+                padding: 14px 18px; color: var(--text-dim); cursor: pointer; white-space: nowrap;
+                font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+                border-bottom: 3px solid transparent; transition: all 0.3s ease;
                 flex-shrink: 0;
             }}
-            .nav-item.active {{ color: var(--text); border-bottom-color: var(--accent); }}
-            main {{ flex-grow: 1; overflow-y: auto; padding: 15px; }}
+            .nav-item:hover {{ color: var(--text); background: rgba(255, 102, 163, 0.05); }}
+            .nav-item.active {{ color: var(--accent); border-bottom-color: var(--accent); background: rgba(255, 102, 163, 0.1); }}
+            main {{ flex-grow: 1; overflow-y: auto; padding: 20px; }}
             .tab-content {{ display: none; }}
-            .tab-content.active {{ display: block; }}
-            .card {{ background: var(--bg-sec); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 15px; }}
-            .card-title {{ font-size: 16px; font-weight: bold; margin-bottom: 12px; color: var(--accent); display: flex; align-items: center; gap: 8px; }}
-            .input-group {{ display: flex; gap: 8px; margin-bottom: 10px; }}
-            input, textarea {{ width: 100%; background: var(--bg-main); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 6px; outline: none; font-family: inherit; }}
-            button {{ background: var(--bg-card); border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 6px; cursor: pointer; }}
-            button.primary {{ background: var(--success); }}
-            button.danger {{ background: var(--error); }}
+            .tab-content.active {{ display: block; animation: fadeIn 0.3s ease; }}
+            @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(5px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+            .card {{ background: var(--bg-sec); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+            .card-title {{ font-size: 16px; font-weight: bold; margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px; }}
+            .input-group {{ display: flex; gap: 10px; margin-bottom: 12px; }}
+            input, textarea {{ width: 100%; background: var(--bg-main); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; outline: none; font-family: inherit; transition: border-color 0.2s; }}
+            input:focus, textarea:focus {{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255, 102, 163, 0.2); }}
+            button {{ background: var(--bg-card); border: 1px solid var(--accent); color: var(--accent); padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }}
+            button:hover {{ background: var(--accent); color: var(--bg-main); transform: translateY(-1px); }}
+            button.primary {{ background: linear-gradient(135deg, var(--accent), var(--success)); border: none; color: #fff; box-shadow: 0 4px 10px rgba(212, 42, 120, 0.3); }}
+            button.primary:hover {{ box-shadow: 0 6px 15px rgba(255, 102, 163, 0.4); filter: brightness(1.1); color:#fff; }}
+            button.danger {{ background: var(--bg-main); border: 1px solid var(--error); color: var(--error); }}
+            button.danger:hover {{ background: var(--error); color: white; }}
             ul {{ list-style: none; padding: 0; }}
-            li {{ display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }}
-            #terminal {{ background: #000; padding: 10px; font-size: 11px; height: 300px; transition: height 0.3s; overflow-y: auto; white-space: pre-wrap; color: #0f0; border-radius: 4px; border: 1px solid var(--border); }}
-            #terminal.expanded {{ height: 70vh; font-size: 12px; }}
-            .log-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }}
-            .toggle-switch {{ display: flex; align-items: center; gap: 10px; margin-bottom: 10px; cursor: pointer; }}
-            .toggle-switch input {{ width: auto; }}
+            li {{ display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); transition: background 0.2s; }}
+            li:hover {{ background: rgba(255, 102, 163, 0.03); border-radius: 6px; padding: 0 8px;}}
+            #terminal {{ background: #0c0509; padding: 12px; font-size: 12px; font-family: 'Consolas', monospace; height: 300px; transition: height 0.3s; overflow-y: auto; white-space: pre-wrap; color: #ff85be; border-radius: 8px; border: 1px solid var(--border); box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); }}
+            #terminal.expanded {{ height: 70vh; font-size: 13px; }}
+            .log-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }}
+            .toggle-switch {{ display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer; padding: 8px; border-radius: 8px; transition: background 0.2s;}}
+            .toggle-switch:hover {{ background: var(--bg-card); }}
+            .toggle-switch input {{ width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }}
             .html-preview {{
                 background: var(--bg-main);
-                border: 1px solid var(--border);
-                border-radius: 6px;
-                padding: 10px;
+                border: 1px dashed var(--accent);
+                border-radius: 8px;
+                padding: 15px;
                 margin-top: 10px;
-                min-height: 100px;
+                min-height: 120px;
                 font-size: 14px;
+                line-height: 1.5;
                 color: var(--text);
                 overflow-wrap: break-word;
             }}
-            .html-preview a {{ color: var(--accent); }}
+            .html-preview a {{ color: var(--accent); text-decoration: none; font-weight: 500; }}
+            .html-preview a:hover {{ text-decoration: underline; }}
             .processed-links {{
                 font-size: 12px;
-                color: var(--success);
-                margin-top: 10px;
+                color: var(--text);
+                margin-top: 12px;
                 background: linear-gradient(135deg, rgba(212, 42, 120, 0.2), rgba(255, 102, 163, 0.1));
                 padding: 10px;
                 border-radius: 8px;
