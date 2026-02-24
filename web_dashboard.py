@@ -600,6 +600,7 @@ async def handle_index(request):
                     {{k:'whatsapp_enabled',l:'✅ Habilitar WhatsApp (true/false)'}},
                     {{k:'green_api_instance_id',l:'ID Instância Green-API'}},
                     {{k:'green_api_token',l:'Token Green-API'}},
+                    {{k:'green_api_host',l:'Host Green-API (ex: 7103.api.greenapi.com)'}},
                     {{k:'whatsapp_destination',l:'ID Grupo/Comunidade WA'}}
                 ];
                 const c = document.getElementById('settings-form');
