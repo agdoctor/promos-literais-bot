@@ -1,7 +1,5 @@
 telethon
 google-genai>=0.6.0
-telethon
-google-genai>=0.6.0
 aiogram
 httpx
 python-dotenv
@@ -9,3 +7,4 @@ tenacity
 Pillow
 beautifulsoup4
 aiohttp
+requests
