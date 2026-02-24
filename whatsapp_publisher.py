@@ -8,19 +8,37 @@ def send_whatsapp_msg(text: str, media_path: str | None = None):
     Envia uma mensagem para o WhatsApp via Green-API.
     Suporta texto e imagem (via Upload).
     """
-    if not WHATSAPP_ENABLED or not GREEN_API_INSTANCE_ID or not GREEN_API_TOKEN or not WHATSAPP_DESTINATION:
+    from database import get_config
+    
+    # Busca configurações (Prioridade: Banco de dados > Config.py/Env)
+    db_enabled = get_config("whatsapp_enabled").lower() == "true"
+    enabled = db_enabled or WHATSAPP_ENABLED
+    
+    instance_id = get_config("green_api_instance_id") or GREEN_API_INSTANCE_ID
+    token = get_config("green_api_token") or GREEN_API_TOKEN
+    host = get_config("green_api_host") or GREEN_API_HOST
+    destination = get_config("whatsapp_destination") or WHATSAPP_DESTINATION
+
+    if not enabled:
+        print("⚠️ WhatsApp desabilitado nas configurações.")
+        return None
+
+    if not instance_id or not token or not destination:
+        print(f"⚠️ Faltam credenciais: ID={instance_id}, Destino={destination}")
         return None
 
     # Limpar o host caso o usuário tenha colocado https://
-    host_clean = GREEN_API_HOST.replace("https://", "").replace("http://", "").strip("/")
+    host_clean = host.replace("https://", "").replace("http://", "").strip("/")
+    
+    print(f"📡 Tentando enviar para WhatsApp: Host={host_clean}, Instance={instance_id}, Destino={destination}")
 
     try:
         # Se houver mídia local, fazemos o upload
         if media_path and os.path.exists(media_path):
-            url = f"https://{host_clean}/waInstance{GREEN_API_INSTANCE_ID}/sendFileByUpload/{GREEN_API_TOKEN}"
+            url = f"https://{host_clean}/waInstance{instance_id}/sendFileByUpload/{token}"
             
             payload = {
-                'chatId': WHATSAPP_DESTINATION,
+                'chatId': destination,
                 'caption': text
             }
             
@@ -31,9 +49,9 @@ def send_whatsapp_msg(text: str, media_path: str | None = None):
             response = requests.post(url, data=payload, files=files, timeout=30)
         else:
             # Caso contrário, apenas texto
-            url = f"https://{host_clean}/waInstance{GREEN_API_INSTANCE_ID}/sendMessage/{GREEN_API_TOKEN}"
+            url = f"https://{host_clean}/waInstance{instance_id}/sendMessage/{token}"
             payload = {
-                "chatId": WHATSAPP_DESTINATION,
+                "chatId": destination,
                 "message": text
             }
             headers = {'Content-Type': 'application/json'}
