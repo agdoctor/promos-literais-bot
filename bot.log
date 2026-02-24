@@ -1,0 +1,553 @@
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 49, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+Traceback (most recent call last):
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 49, in <module>
+    asyncio.run(main())
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 26, in main
+      File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 13, in write
+    self.terminal.write(message)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f916' in position 0: character maps to <undefined>
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 49, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+Traceback (most recent call last):
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 49, in <module>
+    asyncio.run(main())
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 26, in main
+      File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 13, in write
+    self.terminal.write(message)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f916' in position 0: character maps to <undefined>
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 49, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+Traceback (most recent call last):
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 49, in <module>
+    asyncio.run(main())
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+  File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 26, in main
+      File "C:\Users\luizh\.gemini\antigravity\literalmentepromo\literalmente_bot\main.py", line 13, in write
+    self.terminal.write(message)
+  File "C:\Users\luizh\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f916' in position 0: character maps to <undefined>
+============================================================
+🤖 Bot Literalmente Promo - Sistema de Monitoramento + Controle
+============================================================
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+🌐 Dashboard rodando na porta 8080
+✅ Userbot conectado! Monitorando do Banco de Dados: ['promoslivross', 'livroscomdesconto']
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 1.269924 seconds and try again... (tryings = 1, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 1.646084 seconds and try again... (tryings = 2, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 2.133816 seconds and try again... (tryings = 3, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 2.805695 seconds and try again... (tryings = 4, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 3.544498 seconds and try again... (tryings = 5, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 4.500668 seconds and try again... (tryings = 6, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 5.028853 seconds and try again... (tryings = 7, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 4.958151 seconds and try again... (tryings = 8, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 5.130872 seconds and try again... (tryings = 9, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 5.103635 seconds and try again... (tryings = 10, bot id = 8545073578)
+Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+Sleep for 4.972209 seconds and try again... (tryings = 11, bot id = 8545073578)
+============================================================
+Bot Literalmente Promo - Sistema de Monitoramento + Controle
+============================================================
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+============================================================
+Bot Literalmente Promo - Sistema de Monitoramento + Controle
+============================================================
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+============================================================
+Bot Literalmente Promo - Sistema de Monitoramento + Controle
+============================================================
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...
+⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.
+🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)
+
+Erro fatal: [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080): [winerror 10048] normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta)
+⏳ Cancelando processos em segundo plano...
+⏳ Tentando reconectar em 5 segundos...

@@ -25,9 +25,9 @@ def extract_urls(text: str) -> list[str]:
     Encontra e retorna todas as URLs de um texto usando Expressões Regulares (Regex).
     Pega links com ou sem https:// (ex: mercadolivre.com/sec/123).
     """
-    # Regex melhorada para pegar domínios conhecidos mesmo sem https
-    # Regex robusta para capturar links com ou sem protocolo, focando em domínios de ofertas
-    url_pattern = re.compile(r'(?:https?://)?(?:www\.)?(?:amazon\.com\.br|amzn\.to|amzlink\.to|amz\.run|mercadolivre\.com\.br|mercadolivre\.com|mlb\.sh|shopee\.com\.br|is\.gd|bit\.ly|tinyurl\.com|cutt\.ly)/\S+')
+    # Regex melhorada: pega domínios conhecidos mas exclui pontuação final e caracteres HTML como (< > " ' [ ] { } )
+    # Usamos lookbehind negativo para não incluir pontuação no final da URL
+    url_pattern = re.compile(r'(?:https?://|www\.)[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|mercadolivre\.com[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|meli\.la[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|amzn\.to[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|amz\.run[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|shopee\.com\.br[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|is\.gd[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|bit\.ly[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|tinyurl\.com[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|cutt\.ly[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])')
     urls = url_pattern.findall(text)
     
     # Normalizar adicionando https:// se faltar
@@ -58,7 +58,8 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
     """
     urls = extract_urls(text)
     if extra_link:
-        urls.append(extra_link)
+        # Coloca o link extra (se vindo do scraper manual) no início para ser o [LINK_0]
+        urls.insert(0, extra_link)
     
     # Dicionário que mapeará o placeholder para a URL convertida final
     placeholder_map = {}
@@ -69,15 +70,22 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
     
     for i, original_url in enumerate(unique_urls):
         placeholder = f"[LINK_{i}]"
-        clean_text = clean_text.replace(original_url, placeholder)
         
         try:
-            # Filtro rápido antes de carregar a URL
+            # Se for um link do nosso próprio canal (usado para cupons), não substituímos por placeholder nem bloqueamos
+            if "t.me/promosliterais" in original_url.lower():
+                continue
+
+            # Se chegamos aqui, é um link válido para processar
+            # MAS, se ele estiver na blacklist, substituímos pelo placeholder mas marcamos como None para ser removido depois
             if any(domain in original_url.lower() for domain in DOMAIN_BLACKLIST):
                 print(f"🚫 Link bloqueado (Blacklist): {original_url}")
+                clean_text = clean_text.replace(original_url, placeholder)
                 placeholder_map[placeholder] = None
                 continue
 
+            # Processamento Normal
+            clean_text = clean_text.replace(original_url, placeholder)
             print(f"Processando URL: {original_url}")
             
             # 1. Expandir URL caso seja encurtada (ex: amzn.to)
