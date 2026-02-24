@@ -27,7 +27,7 @@ async def handle_index(request):
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
         <title>Pechinchas - Admin</title>
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
         <style>
@@ -73,7 +73,7 @@ async def handle_index(request):
             .card {{ background: var(--bg-sec); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
             .card-title {{ font-size: 16px; font-weight: bold; margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px; }}
             .input-group {{ display: flex; gap: 10px; margin-bottom: 12px; }}
-            input, textarea {{ width: 100%; background: var(--bg-main); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; outline: none; font-family: inherit; transition: border-color 0.2s; }}
+            input, textarea, select {{ width: 100%; background: var(--bg-main); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; outline: none; font-family: inherit; transition: border-color 0.2s; font-size: 16px !important; }}
             input:focus, textarea:focus {{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255, 102, 163, 0.2); }}
             button {{ background: var(--bg-card); border: 1px solid var(--accent); color: var(--accent); padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }}
             button:hover {{ background: var(--accent); color: var(--bg-main); transform: translateY(-1px); }}
