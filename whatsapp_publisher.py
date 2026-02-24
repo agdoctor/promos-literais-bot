@@ -8,27 +8,33 @@ def send_whatsapp_msg(text: str, media_path: str | None = None):
     Envia uma mensagem para o WhatsApp via Green-API.
     Suporta texto e imagem (via Upload).
     """
-    from database import get_config
+    try:
+        from database import get_config
+    except ImportError:
+        # Fallback caso database não exista no contexto (improvável, mas seguro)
+        def get_config(x): return ""
     
-    # Busca configurações (Prioridade: Banco de dados > Config.py/Env)
+    # Busca configurações e limpa espaços (Prioridade: Banco de dados > Config.py/Env)
     db_enabled = get_config("whatsapp_enabled").lower() == "true"
     enabled = db_enabled or WHATSAPP_ENABLED
     
-    instance_id = get_config("green_api_instance_id") or GREEN_API_INSTANCE_ID
-    token = get_config("green_api_token") or GREEN_API_TOKEN
-    host = get_config("green_api_host") or GREEN_API_HOST
-    destination = get_config("whatsapp_destination") or WHATSAPP_DESTINATION
+    instance_id = (get_config("green_api_instance_id") or GREEN_API_INSTANCE_ID or "").strip()
+    token = (get_config("green_api_token") or GREEN_API_TOKEN or "").strip()
+    host = (get_config("green_api_host") or GREEN_API_HOST or "api.green-api.com").strip()
+    destination = (get_config("whatsapp_destination") or WHATSAPP_DESTINATION or "").strip()
 
     if not enabled:
         print("⚠️ WhatsApp desabilitado nas configurações.")
         return None
 
     if not instance_id or not token or not destination:
-        print(f"⚠️ Faltam credenciais: ID={instance_id}, Destino={destination}")
+        print(f"⚠️ Faltam credenciais: ID={instance_id}, Destino='{destination}'")
         return None
 
-    # Limpar o host caso o usuário tenha colocado https://
+    # Limpar o host: remove protocolos, barras e corrige falta de hífen em 'greenapi'
     host_clean = host.replace("https://", "").replace("http://", "").strip("/")
+    if "greenapi.com" in host_clean and "green-api.com" not in host_clean:
+        host_clean = host_clean.replace("greenapi.com", "green-api.com")
     
     print(f"📡 Tentando enviar para WhatsApp: Host={host_clean}, Instance={instance_id}, Destino={destination}")
 
