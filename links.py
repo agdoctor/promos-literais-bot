@@ -25,9 +25,9 @@ def extract_urls(text: str) -> list[str]:
     Encontra e retorna todas as URLs de um texto usando Expressões Regulares (Regex).
     Pega links com ou sem https:// (ex: mercadolivre.com/sec/123).
     """
-    # Regex melhorada: pega domínios conhecidos mas exclui pontuação final e caracteres HTML como (< > " ' [ ] { } )
+    # Regex melhorada: pega domínios conhecidos mas exclui pontuação final, caracteres HTML e marcas de formatação (* _ ~)
     # Usamos lookbehind negativo para não incluir pontuação no final da URL
-    url_pattern = re.compile(r'(?:https?://|www\.)[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|mercadolivre\.com[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|meli\.la[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|amzn\.to[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|amz\.run[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|shopee\.com\.br[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|is\.gd[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|bit\.ly[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|tinyurl\.com[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])|cutt\.ly[^\s!?,;\"\'<>()[\]{}]+(?<![.!?,;])')
+    url_pattern = re.compile(r'(?:https?://|www\.)[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|mercadolivre\.com[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|meli\.la[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|amzn\.to[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|amz\.run[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|shopee\.com\.br[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|is\.gd[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|bit\.ly[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|tinyurl\.com[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])|cutt\.ly[^\s!?,;\"\'<>()[\]{}*_~]+(?<![.!?,;])')
     urls = url_pattern.findall(text)
     
     # Normalizar adicionando https:// se faltar
@@ -68,13 +68,18 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
     # Para evitar substituição parcial (ex: amzn.to/1 e amzn.to/12), vamos usar dict de originais temporário
     unique_urls = list(dict.fromkeys(urls))  # Remove duplicatas mantendo a ordem
     
-    for i, original_url in enumerate(unique_urls):
-        placeholder = f"[LINK_{i}]"
-        
+    # Contador manual para garantir que os placeholders sejam sequenciais [LINK_0], [LINK_1]...
+    # mesmo que a gente pule links internos
+    curr_placeholder_idx = 0
+    
+    for original_url in unique_urls:
         try:
             # Se for um link do nosso próprio canal (usado para cupons), não substituímos por placeholder nem bloqueamos
             if "t.me/promosliterais" in original_url.lower():
                 continue
+
+            placeholder = f"[LINK_{curr_placeholder_idx}]"
+            curr_placeholder_idx += 1
 
             # Se chegamos aqui, é um link válido para processar
             # MAS, se ele estiver na blacklist, substituímos pelo placeholder mas marcamos como None para ser removido depois

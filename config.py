@@ -28,3 +28,9 @@ TARGET_CHANNEL = os.getenv("TARGET_CHANNEL")
 
 WEBAPP_URL = os.getenv("WEBAPP_URL")
 CONSOLE_TOKEN = os.getenv("CONSOLE_TOKEN")
+
+# WhatsApp (Green-API - Lightweight)
+WHATSAPP_ENABLED = os.getenv("WHATSAPP_ENABLED", "false").lower() == "true"
+GREEN_API_INSTANCE_ID = os.getenv("GREEN_API_INSTANCE_ID")
+GREEN_API_TOKEN = os.getenv("GREEN_API_TOKEN")
+WHATSAPP_DESTINATION = os.getenv("WHATSAPP_DESTINATION")

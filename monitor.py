@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from publisher import publish_deal, bot
 from watermark import apply_watermark
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+from whatsapp_publisher import send_whatsapp_msg
 
 # O ADMIN_USER_ID agora é recuperado do banco de dados (chave 'admin_id')
 
@@ -85,6 +86,16 @@ async def worker_queue():
             titulo_clean = texto_final.split('\n')[0].replace('🛒', '').strip()
             valor_clean = extract_price(texto_final) or "0"
             add_to_history(titulo_clean, valor_clean)
+            
+            # --- Envio para WhatsApp (Se habilitado) ---
+            try:
+                msg_wa = texto_final.replace("<b>", "*").replace("</b>", "*")
+                msg_wa = msg_wa.replace("<i>", "_").replace("</i>", "_")
+                msg_wa = re.sub(r'<a href="(.*?)">.*?</a>', r'\1', msg_wa)
+                
+                await send_whatsapp_msg(msg_wa, media_path)
+            except Exception as e:
+                print(f"Erro ao disparar para WhatsApp: {e}")
             
             # Limpar a mídia local depois de publicar de verdade
             if media_path and os.path.exists(media_path):
