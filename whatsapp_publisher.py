@@ -11,10 +11,13 @@ def send_whatsapp_msg(text: str, media_path: str | None = None):
     if not WHATSAPP_ENABLED or not GREEN_API_INSTANCE_ID or not GREEN_API_TOKEN or not WHATSAPP_DESTINATION:
         return None
 
+    # Limpar o host caso o usuário tenha colocado https://
+    host_clean = GREEN_API_HOST.replace("https://", "").replace("http://", "").strip("/")
+
     try:
         # Se houver mídia local, fazemos o upload
         if media_path and os.path.exists(media_path):
-            url = f"https://{GREEN_API_HOST}/waInstance{GREEN_API_INSTANCE_ID}/sendFileByUpload/{GREEN_API_TOKEN}"
+            url = f"https://{host_clean}/waInstance{GREEN_API_INSTANCE_ID}/sendFileByUpload/{GREEN_API_TOKEN}"
             
             payload = {
                 'chatId': WHATSAPP_DESTINATION,
@@ -28,7 +31,7 @@ def send_whatsapp_msg(text: str, media_path: str | None = None):
             response = requests.post(url, data=payload, files=files, timeout=30)
         else:
             # Caso contrário, apenas texto
-            url = f"https://{GREEN_API_HOST}/waInstance{GREEN_API_INSTANCE_ID}/sendMessage/{GREEN_API_TOKEN}"
+            url = f"https://{host_clean}/waInstance{GREEN_API_INSTANCE_ID}/sendMessage/{GREEN_API_TOKEN}"
             payload = {
                 "chatId": WHATSAPP_DESTINATION,
                 "message": text
