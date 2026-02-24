@@ -31,7 +31,7 @@ def format_whatsapp_text(html_text: str) -> str:
         
         # Se for um link genérico (botão), formatamos como CTA chamativo
         if label.lower() in generics or not label:
-            return f"\n\n*🛍️ CLIQUE AQUI PARA COMPRAR:*\n{url}"
+            return f"\n\n*🛍️ PEGAR PROMOÇÃO:*\n{url}"
         
         # Se for um link com nome específico (ex: nome da loja ou produto)
         return f"\n\n*👉 {label.upper()}:*\n{url}"
