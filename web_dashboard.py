@@ -3,7 +3,7 @@ from database import (
     get_config, set_config, get_canais, add_canal, remove_canal,
     get_keywords, add_keyword, remove_keyword,
     get_negative_keywords, add_negative_keyword, remove_negative_keyword,
-    get_admins, add_admin, remove_admin, get_active_giveaways, create_giveaway, close_giveaway
+    get_admins, add_admin, remove_admin, get_active_sorteios, create_sorteio, finalize_sorteio
 )
 import secrets
 import os
@@ -661,12 +661,12 @@ async def handle_admins_api(request):
 
 async def handle_sorteios_api(request):
     if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
-    if request.method == 'GET': return web.json_response({"sorteios": get_active_giveaways()})
+    if request.method == 'GET': return web.json_response({"sorteios": get_active_sorteios()})
     elif request.method == 'POST':
-        data = await request.json(); create_giveaway(data['premio'])
+        data = await request.json(); create_sorteio(data['premio'])
         return web.json_response({"success": True})
     elif request.method == 'PATCH':
-        data = await request.json(); close_giveaway(int(data['id']), int(data['winner_id']), data['winner_name'])
+        data = await request.json(); finalize_sorteio(int(data['id']), int(data['winner_id']), data['winner_name'])
         return web.json_response({"success": True})
 
 async def handle_settings_api(request):
