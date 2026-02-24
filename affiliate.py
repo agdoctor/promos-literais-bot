@@ -249,25 +249,27 @@ async def convert_to_affiliate(url: str) -> str:
     
     # Amazon
     if 'amazon.com.br' in domain or 'amazon.com' in domain:
-        # Importa a tag da config (fazemos o import local para evitar circular caso ocorra no futuro, ou import global)
         from config import AMAZON_TAG
         
-        # Injetar tag de afiliado limpando sujeiras de outras tags
-        params = parse_qs(parsed.query)
+        # Tenta extrair o ASIN (10 caracteres alfanuméricos)
+        # Padrões comuns: /dp/ASIN, /gp/product/ASIN, /exec/obidos/ASIN
+        asin_match = re.search(r'/(?:dp|gp/product|exec/obidos|aw/d)/([A-Z0-9]{10})', url, re.IGNORECASE)
+        asin = asin_match.group(1).upper() if asin_match else None
         
-        # Remove tags antigas ou de outros afiliados
-        if 'tag' in params:
-            del params['tag']
-            
-        # Limpa parâmetros de rastreio de terceiros comuns na rede Amazon
+        if asin:
+            # Reconstrói a URL no formato mais curto possível
+            new_url = f"https://{parsed.netloc}/dp/{asin}?tag={AMAZON_TAG}"
+            print(f"✅ Link Amazon encurtado via ASIN ({asin}): {new_url}")
+            return new_url
+
+        # Fallback caso não ache ASIN (mantém limpeza de parâmetros)
+        params = parse_qs(parsed.query)
+        if 'tag' in params: del params['tag']
         params_to_remove = ['linkCode', 'hvadid', 'hvpos', 'hvnetw', 'hvrand', 'hvpone', 'hvptwo', 'hvqmt', 'hvdev', 'hvdvcmdl', 'hvlocint', 'hvlocphy', 'hvtargid', 'psc', 'language', 'gad_source', 'mcid', 'ref']
         for p in params_to_remove:
-            if p in params:
-                del params[p]
-                
-        # Adiciona a nossa tag lida das configurações
-        params['tag'] = [AMAZON_TAG] 
+            if p in params: del params[p]
         
+        params['tag'] = [AMAZON_TAG] 
         new_query = urlencode(params, doseq=True)
         return urlunparse(parsed._replace(query=new_query))
     
