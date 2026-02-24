@@ -446,11 +446,12 @@ async def handle_index(request):
                     scrapeData = {{
                         text: d.text,
                         local_image_path: d.media_path,
+                        link_original: d.link_original,
                         image_url: d.media_path ? '/api/image?token=' + token + '&path=' + encodeURIComponent(d.media_path) + '&apply_wm=1&t=' + Date.now() : null
                     }};
 
                     Telegram.WebApp.MainButton.setText("✨ Reescrevendo com IA...");
-                    const r = await api('rewrite_tg', 'POST', {{ text: d.text }});
+                    const r = await api('rewrite_tg', 'POST', {{ text: d.text, link_original: d.link_original }});
                     if(r.error) throw new Error(r.error);
 
                     document.getElementById('final-text').innerHTML = r.text.replace(/\\n/g, '<br>');
@@ -495,7 +496,7 @@ async def handle_index(request):
                 try {{
                     const d = await api('preview_links', 'POST', {{
                         text: htmlText,
-                        url: document.getElementById('promo-url').value
+                        url: document.getElementById('promo-url').value || scrapeData.link_original
                     }});
                     if(d.placeholders) {{
                         let html = "<b>Links Finais Detectados:</b><ul style='margin:5px 0; padding-left:15px;'>";
@@ -522,7 +523,7 @@ async def handle_index(request):
                 
                 try {{
                     const d = await api('post_offer', 'POST', {{
-                        url: document.getElementById('promo-url').value,
+                        url: document.getElementById('promo-url').value || (scrapeData ? scrapeData.link_original : ""),
                         text: htmlText,
                         image_path: scrapeData.local_image_path // Corrigido: scraper usa local_image_path
                     }});
@@ -936,9 +937,14 @@ async def handle_scrape_tg(request):
             import os
             local_media_path = await telethon_client.download_media(tg_msg, file=base_downloads_path + os.path.sep)
             
+        from links import extract_urls
+        links = extract_urls(texto_original)
+        first_link = links[0] if links else ""
+
         return web.json_response({
             "text": texto_original,
-            "media_path": local_media_path
+            "media_path": local_media_path,
+            "link_original": first_link
         })
     except Exception as e:
         import traceback
@@ -950,11 +956,12 @@ async def handle_rewrite_tg(request):
     try:
         data = await request.json()
         text = data.get("text")
+        link_orig = data.get("link_original")
         
         from links import process_and_replace_links
         from rewriter import reescrever_promocao
         
-        texto_com_nossos_links, _ = await process_and_replace_links(text)
+        texto_com_nossos_links, _ = await process_and_replace_links(text, link_orig)
         texto_reescrito = await reescrever_promocao(texto_com_nossos_links)
         
         return web.json_response({"text": texto_reescrito})
