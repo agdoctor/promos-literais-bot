@@ -154,7 +154,7 @@ async def handle_index(request):
                     <div class="card-title">🔗 Colar Link</div>
                     <p style="font-size:13px; color:var(--text-dim)">Cole o link do produto da Amazon, Mercado Livre, Shopee, etc.</p>
                     <div class="input-group">
-                        <input type="text" id="promo-url" placeholder="https://www.amazon.com.br/dp/...">
+                        <input type="text" id="promo-url" placeholder="Cole aqui o link do produto da Amazon, Shopee, etc...">
                         <button class="primary" onclick="startScrape()">Continuar ➔</button>
                     </div>
                 </div>
