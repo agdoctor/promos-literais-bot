@@ -103,6 +103,21 @@ async def cmd_enviar_shortcut(message: Message):
     if is_admin(message.from_user.id):
         await start_criar_oferta_msg(message)
 
+@dp.message(Command("seturl"))
+async def set_webapp_url_cmd(message: Message):
+    if not is_admin(message.from_user.id): return
+    
+    parts = message.text.split(" ", 1)
+    if len(parts) < 2:
+        await message.answer("⚠️ Uso incorreto. Digite: `/seturl https://sua-url.com`", parse_mode="Markdown")
+        return
+        
+    nova_url = parts[1].strip()
+    from database import set_config
+    set_config("webapp_url", nova_url)
+    
+    await message.answer(f"✅ URL do WebApp configurada com sucesso para:\n{nova_url}\n\nO botão de menu será atualizado na próxima vez que o bot reiniciar (use `/reiniciar` no Telegram ou reinicie pela SquareCloud).")
+
 @dp.message(Command("reiniciar"))
 async def cmd_reiniciar(message: Message):
     if not is_admin(message.from_user.id):
