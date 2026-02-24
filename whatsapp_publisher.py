@@ -23,14 +23,18 @@ def format_whatsapp_text(html_text: str) -> str:
     text = text.replace("<code>", "```").replace("</code>", "```")
     text = text.replace("<pre>", "```").replace("</pre>", "```")
 
-    # Links: <a href="url">label</a> -> url (se label for genérico) ou label: url
+    # Links: <a href="url">label</a> -> Formato "Botão Visual" para WhatsApp
     def link_repl(match):
         url = match.group(1).strip()
         label = match.group(2).strip()
         generics = ["pegar promoção", "clique aqui", "comprar", "link", "aproveite", "ir para a loja", "oferta", "ver mais", "pegar"]
+        
+        # Se for um link genérico (botão), formatamos como CTA chamativo
         if label.lower() in generics or not label:
-            return url
-        return f"{label}: {url}"
+            return f"\n\n*🛍️ CLIQUE AQUI PARA COMPRAR:*\n{url}"
+        
+        # Se for um link com nome específico (ex: nome da loja ou produto)
+        return f"\n\n*👉 {label.upper()}:*\n{url}"
 
     # Regex robusta para links (suporta aspas simples e duplas)
     text = re.sub(r'<a\s+.*?href=["\'](.*?)["\'].*?>(.*?)</a>', link_repl, text, flags=re.DOTALL | re.IGNORECASE)
