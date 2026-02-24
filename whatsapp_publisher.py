@@ -3,6 +3,46 @@ import json
 import os
 from config import GREEN_API_INSTANCE_ID, GREEN_API_TOKEN, WHATSAPP_DESTINATION, WHATSAPP_ENABLED, GREEN_API_HOST
 
+def format_whatsapp_text(html_text: str) -> str:
+    """
+    Converte HTML básico (do Telegram) para o formato do WhatsApp.
+    Handles <b>, <i>, <u>, <code> e <a href="...">.
+    """
+    import re
+    import html
+    
+    # Negrito
+    text = html_text.replace("<b>", "*").replace("</b>", "*")
+    text = text.replace("<strong>", "*").replace("</strong>", "*")
+    # Itálico
+    text = text.replace("<i>", "_").replace("</i>", "_")
+    text = text.replace("<em>", "_").replace("</em>", "_")
+    # Sublinhado (WhatsApp não tem, removemos a tag)
+    text = text.replace("<u>", "").replace("</u>", "")
+    # Monospace
+    text = text.replace("<code>", "```").replace("</code>", "```")
+    text = text.replace("<pre>", "```").replace("</pre>", "```")
+
+    # Links: <a href="url">label</a> -> url (se label for genérico) ou label: url
+    def link_repl(match):
+        url = match.group(1).strip()
+        label = match.group(2).strip()
+        generics = ["pegar promoção", "clique aqui", "comprar", "link", "aproveite", "ir para a loja", "oferta", "ver mais", "pegar"]
+        if label.lower() in generics or not label:
+            return url
+        return f"{label}: {url}"
+
+    # Regex robusta para links (suporta aspas simples e duplas)
+    text = re.sub(r'<a\s+.*?href=["\'](.*?)["\'].*?>(.*?)</a>', link_repl, text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Limpa qualquer tag restante
+    text = re.sub(r'<.*?>', '', text)
+    
+    # Converte entidades HTML (&nbsp;, &lt;, etc)
+    text = html.unescape(text)
+    
+    return text.strip()
+
 def send_whatsapp_msg(text: str, media_path: str | None = None):
     """
     Envia uma mensagem para o WhatsApp via Green-API.

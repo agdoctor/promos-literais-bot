@@ -89,11 +89,9 @@ async def worker_queue():
             
             # --- Envio para WhatsApp (Se habilitado) ---
             try:
-                msg_wa = texto_final.replace("<b>", "*").replace("</b>", "*")
-                msg_wa = msg_wa.replace("<i>", "_").replace("</i>", "_")
-                msg_wa = re.sub(r'<a href="(.*?)">.*?</a>', r'\1', msg_wa)
-                
-                await send_whatsapp_msg(msg_wa, media_path)
+                from whatsapp_publisher import send_whatsapp_msg, format_whatsapp_text
+                msg_wa = format_whatsapp_text(texto_final)
+                send_whatsapp_msg(msg_wa, media_path)
             except Exception as e:
                 print(f"Erro ao disparar para WhatsApp: {e}")
             

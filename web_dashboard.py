@@ -889,11 +889,8 @@ async def handle_post_offer(request):
         
         # --- Envio para WhatsApp (Se habilitado) ---
         try:
-            wa_text = text_base.replace("<b>", "*").replace("</b>", "*")
-            wa_text = wa_text.replace("<i>", "_").replace("</i>", "_")
-            wa_text = re.sub(r'<a href="(.*?)">.*?</a>', r'\1', wa_text)
-            
-            from whatsapp_publisher import send_whatsapp_msg
+            from whatsapp_publisher import send_whatsapp_msg, format_whatsapp_text
+            wa_text = format_whatsapp_text(text_base)
             send_whatsapp_msg(wa_text, img_path)
         except Exception as e:
             print(f"Erro ao disparar para WhatsApp (Manual): {e}")
