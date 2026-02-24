@@ -73,8 +73,8 @@ async def cmd_log(message: Message):
 
 @dp.message(Command("enviar"))
 async def cmd_enviar_shortcut(message: Message):
-    if is_admin(message.from_user.id):
-        await start_criar_oferta_msg(message)
+    if not is_admin(message.from_user.id): return
+    await start_criar_oferta_msg(message)
 
 @dp.message(Command("seturl"))
 async def set_webapp_url_cmd(message: Message):
