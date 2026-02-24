@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 from config import API_ID, API_HASH, TARGET_CHANNEL
 from database import get_canais, get_keywords, get_config, check_duplicate, add_to_history, get_negative_keywords
 
@@ -23,7 +24,14 @@ base_downloads_path = os.path.join(os.getcwd(), "downloads")
 if not os.path.exists(base_downloads_path):
     os.makedirs(base_downloads_path)
 
-client = TelegramClient('literalmente_userbot', API_ID, API_HASH)
+# Configuração da Sessão (Suporte a StringSession para Square Cloud)
+session_str = os.getenv("TELEGRAM_STRING_SESSION")
+if session_str:
+    print(f"📡 StringSession detectada (Início: {session_str[:15]}...)")
+    client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
+else:
+    print("📁 Usando sessão via arquivo local (literalmente_userbot.session)")
+    client = TelegramClient('literalmente_userbot', API_ID, API_HASH)
 
 # Fila para gerenciar o delay e as postagens
 post_queue = asyncio.Queue()
@@ -97,8 +105,15 @@ async def start_monitoring():
     # Inicia o worker em background
     asyncio.create_task(worker_queue())
     
-    print("⏳ Iniciando o Userbot. Se for a primeira vez, aguarde a solicitação do código no terminal.")
-    await client.start()
+    print("⏳ Conectando o Userbot ao Telegram...")
+    await client.connect()
+    
+    if not await client.is_user_authorized():
+        print("❌ ERRO FATAL: O Userbot não está autorizado! A StringSession fornecida é inválida ou expirou.")
+        print("💡 Tente gerar uma nova StringSession localmente e atualize a variável na Square Cloud.")
+        return
+
+    print("✅ Userbot conectado e autorizado!")
     
     print(f"✅ Userbot conectado! Monitorando do Banco de Dados: {source_channels}")
     
