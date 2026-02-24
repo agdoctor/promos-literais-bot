@@ -373,8 +373,10 @@ async def handle_index(request):
             // Fluxo Enviar Promoção
             let scrapeData = {{}};
             function backToStep(s) {{
-                document.querySelectorAll('#tab-enviar .card').forEach(c => c.style.display = 'none');
-                document.getElementById('step-'+s).style.display = 'block';
+                document.getElementById('step-1').style.display = 'none';
+                document.getElementById('step-2').style.display = 'none';
+                document.getElementById('step-3').style.display = 'none';
+                document.getElementById('step-'+s).style.display = (s === 1 ? 'flex' : 'block');
             }}
             async function startScrape() {{
                 const url = document.getElementById('promo-url').value;
@@ -425,6 +427,46 @@ async def handle_index(request):
                     backToStep(3);
                 }} catch(e) {{
                     Telegram.WebApp.showAlert("Erro ao gerar texto: " + e.message);
+                }} finally {{
+                    Telegram.WebApp.MainButton.hide();
+                }}
+            }}
+
+            async function startTgScrape() {{
+                const url = document.getElementById('tg-url').value;
+                if(!url) return Telegram.WebApp.showAlert("Cole um link do Telegram!");
+                if(!url.includes("t.me/")) return Telegram.WebApp.showAlert("Link inválido! Use t.me/canal/123");
+                
+                Telegram.WebApp.MainButton.setText("🔍 Buscando post...").show();
+                try {{
+                    const d = await api('scrape_tg', 'POST', {{ url: url }});
+                    if(d.error) throw new Error(d.error);
+                    
+                    // Salva os dados brutos
+                    scrapeData = {{
+                        text: d.text,
+                        local_image_path: d.media_path,
+                        image_url: d.media_path ? '/api/image?token=' + token + '&path=' + encodeURIComponent(d.media_path) + '&apply_wm=1&t=' + Date.now() : null
+                    }};
+
+                    Telegram.WebApp.MainButton.setText("✨ Reescrevendo com IA...");
+                    const r = await api('rewrite_tg', 'POST', {{ text: d.text }});
+                    if(r.error) throw new Error(r.error);
+
+                    document.getElementById('final-text').innerHTML = r.text.replace(/\\n/g, '<br>');
+                    
+                    if (scrapeData.local_image_path) {{
+                        document.getElementById('preview-img-3').src = scrapeData.image_url;
+                        document.getElementById('preview-img-3').style.display = 'block';
+                    }} else {{
+                        document.getElementById('preview-img-3').style.display = 'none';
+                    }}
+                    
+                    updatePreview();
+                    previewLinks();
+                    backToStep(3);
+                }} catch(e) {{
+                    Telegram.WebApp.showAlert("Erro ao importar post: " + e.message);
                 }} finally {{
                     Telegram.WebApp.MainButton.hide();
                 }}
@@ -507,6 +549,7 @@ async def handle_index(request):
             }}
             function resetEnviar() {{
                 document.getElementById('promo-url').value = "";
+                document.getElementById('tg-url').value = "";
                 backToStep(1);
                 showTab('dashboard');
             }}
