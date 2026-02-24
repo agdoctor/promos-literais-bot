@@ -837,16 +837,4 @@ async def start_admin_bot():
         except Exception as e:
             print(f"⚠️ Erro ao configurar Botão de Menu: {e}")
             
-    # Enviar notificação de reinício
-    try:
-        admin_id_str = get_config("admin_id")
-        if admin_id_str:
-            await bot.send_message(
-                chat_id=int(admin_id_str), 
-                text="🚀 **SISTEMA INICIADO / REINICIADO**\n\n✅ Bot ativo e monitorando grupos selecionados.",
-                parse_mode="Markdown"
-            )
-    except Exception as e:
-        print(f"Aviso: Não foi possível enviar notificação de startup: {e}")
-        
     await dp.start_polling(bot)

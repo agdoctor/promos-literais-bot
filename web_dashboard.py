@@ -858,6 +858,12 @@ async def start_web_server():
     port = int(os.getenv("PORT", 8080))
     runner = web.AppRunner(app)
     await runner.setup()
-    await web.TCPSite(runner, '0.0.0.0', port).start()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
     print(f"🌐 Dashboard rodando na porta {port}")
-    while True: await asyncio.sleep(3600)
+    try:
+        while True: await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await runner.cleanup()
