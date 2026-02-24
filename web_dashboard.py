@@ -129,6 +129,9 @@ async def handle_index(request):
         </div>
         <main>
             <div id="tab-dashboard" class="tab-content active">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="/assets/pudim_home_painel.png" alt="Literalmente Promo" style="max-width: 100%; height: auto; border-radius: 16px; box-shadow: 0 4px 12px rgba(255,102,163,0.2);">
+                </div>
                 <div class="card">
                     <div class="card-title">🤖 Controle do Bot</div>
                     <div id="status-container">Carregando...</div>
@@ -847,6 +850,12 @@ async def start_web_server():
     app.router.add_post('/api/generate_text', handle_generate_text)
     app.router.add_post('/api/preview_links', handle_preview_links)
     app.router.add_post('/api/post_offer', handle_post_offer)
+    
+    # Servir arquivos estáticos (como a imagem principal)
+    assets_dir = os.path.join(os.path.dirname(__file__), 'assets')
+    if os.path.exists(assets_dir):
+        app.router.add_static('/assets/', assets_dir)
+        
     port = int(os.getenv("PORT", 8080))
     runner = web.AppRunner(app)
     await runner.setup()
