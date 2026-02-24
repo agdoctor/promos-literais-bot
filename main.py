@@ -25,25 +25,30 @@ sys.stderr = sys.stdout
 
 async def main():
     print("="*60)
-    print("🤖 Bot Literalmente Promo - Sistema de Monitoramento + Controle")
+    print("Bot Literalmente Promo - Sistema de Monitoramento + Controle")
     print("="*60)
     
     while True:
+        tasks = []
         try:
-            # Roda os dois processos (Userbot Telethon + Admin Aiogram) juntos assincronamente
+            # Roda os processos juntos assincronamente
             from web_dashboard import start_web_server
-            await asyncio.gather(
-                start_monitoring(),
-                start_admin_bot(),
-                start_web_server()
-            )
+            t1 = asyncio.create_task(start_monitoring())
+            t2 = asyncio.create_task(start_admin_bot())
+            t3 = asyncio.create_task(start_web_server())
+            tasks = [t1, t2, t3]
+            
+            await asyncio.gather(*tasks)
             # Se gather terminar (o que não deve ocorrer normalmente), quebra o loop
             break
         except KeyboardInterrupt:
             print("\nDesligando sistema...")
+            for t in tasks: t.cancel()
             break
         except Exception as e:
             print(f"\nErro fatal: {e}")
+            print("⏳ Cancelando processos em segundo plano...")
+            for t in tasks: t.cancel()
             print("⏳ Tentando reconectar em 5 segundos...")
             await asyncio.sleep(5)
 
