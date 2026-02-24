@@ -193,19 +193,18 @@ async def handle_index(request):
                     <div class="card-title">📤 Revisar e Postar</div>
                     <label style="font-size:12px; color:var(--text-dim)">Editor HTML:</label>
                     <div style="margin-bottom:5px; display:flex; gap:5px; flex-wrap:wrap;">
-                        <button type="button" onclick="tagText('b')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;"><b>B</b></button>
-                        <button type="button" onclick="tagText('i')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;"><i>I</i></button>
-                        <button type="button" onclick="tagText('u')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;"><u>U</u></button>
-                        <button type="button" onclick="tagText('strike')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;"><s>S</s></button>
-                        <button type="button" onclick="tagText('a')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;">Link</button>
-                        <button type="button" onclick="tagText('code')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;">&lt;&gt;</button>
+                        <button type="button" onclick="formatDoc('bold')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;"><b>B</b></button>
+                        <button type="button" onclick="formatDoc('italic')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;"><i>I</i></button>
+                        <button type="button" onclick="formatDoc('underline')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;"><u>U</u></button>
+                        <button type="button" onclick="formatDoc('strikeThrough')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;"><s>S</s></button>
+                        <button type="button" onclick="addLink()" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;">Link</button>
+                        <button type="button" onclick="formatDoc('formatBlock', 'PRE')" style="padding:2px 8px; font-size:12px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px;">&lt;&gt;</button>
                     </div>
-                    <textarea id="final-text" style="height:150px; margin-bottom:10px;" oninput="updatePreview()"></textarea>
+                    <div id="final-text" contenteditable="true" style="height:150px; margin-bottom:10px; padding:8px; background:var(--bg-main); border:1px solid var(--border); color:var(--text); border-radius:6px; overflow-y:auto; font-family:inherit; font-size:14px; outline:none;" oninput="updatePreview()"></div>
                     
-                    <label style="font-size:12px; color:var(--text-dim)">Prévia do Post:</label>
+                    <label style="font-size:12px; color:var(--text-dim)">Prévia da imagem:</label>
                     <div class="html-preview" style="display:flex; flex-direction:column; align-items:center;">
                         <img id="preview-img-3" style="max-width:100%; max-height:250px; object-fit:contain; border-radius:6px; margin-bottom:10px; display:none;">
-                        <div id="html-render-preview" style="width:100%; text-align:left;"></div>
                     </div>
                     
                     <div id="processed-links-container" class="processed-links" style="display:none"></div>
@@ -398,7 +397,7 @@ async def handle_index(request):
                         coupon: document.getElementById('preview-coupon').value,
                         observation: document.getElementById('preview-obs').value
                     }});
-                    document.getElementById('final-text').value = d.text;
+                    document.getElementById('final-text').innerHTML = d.text.replace(/\\n/g, '<br>');
                     updatePreview();
                     previewLinks(); // Chama preview de links em background
                     
@@ -421,33 +420,29 @@ async def handle_index(request):
                 }}
             }}
 
-            function updatePreview() {{
-                const text = document.getElementById('final-text').value;
-                // Renderiza HTML básico interpretando as tags suportadas pelo Telegram (<b>, <i>, <a>, <code>, <pre>)
-                const preview = document.getElementById('html-render-preview');
-                preview.innerHTML = text.replace(/\\n/g, '<br>');
-            }}
-
-            function tagText(t) {{
-                const i = document.getElementById('final-text');
-                const s = i.selectionStart, e = i.selectionEnd;
-                const txt = i.value;
-                const sel = txt.substring(s, e);
-                let rep = "";
-                if(t==='a') rep = `<a href="URL_AQUI">${{sel || "texto"}}</a>`;
-                else rep = `<${{t}}>${{sel}}</${{t}}>`;
-                i.value = txt.substring(0, s) + rep + txt.substring(e);
-                updatePreview();
-                i.focus();
-            }}
+            function formatDoc(cmd, value=null) {
+                document.execCommand(cmd, false, value);
+                document.getElementById('final-text').focus();
+            }
+            function addLink() {
+                const url = prompt('Cole o link:');
+                if(url) formatDoc('createLink', url);
+            }
+            function updatePreview() {
+                // Not needed anymore since the editor is visual
+            }
 
             async function previewLinks() {{
                 const container = document.getElementById('processed-links-container');
                 container.style.display = 'block';
                 container.innerHTML = "⌛ Processando links finais...";
+                
+                let htmlText = document.getElementById('final-text').innerHTML;
+                htmlText = htmlText.replace(/<div>/gi, '\\n').replace(/<\\/div>/gi, '').replace(/<br>/gi, '\\n');
+                
                 try {{
                     const d = await api('preview_links', 'POST', {{
-                        text: document.getElementById('final-text').value,
+                        text: htmlText,
                         url: document.getElementById('promo-url').value
                     }});
                     if(d.placeholders) {{
@@ -469,10 +464,14 @@ async def handle_index(request):
                 const btn = document.getElementById('btn-post');
                 btn.disabled = true;
                 btn.textContent = "⌛ Postando...";
+                
+                let htmlText = document.getElementById('final-text').innerHTML;
+                htmlText = htmlText.replace(/<div>/gi, '\\n').replace(/<\\/div>/gi, '').replace(/<br>/gi, '\\n');
+                
                 try {{
                     const d = await api('post_offer', 'POST', {{
                         url: document.getElementById('promo-url').value,
-                        text: document.getElementById('final-text').value,
+                        text: htmlText,
                         image_path: scrapeData.local_image_path // Corrigido: scraper usa local_image_path
                     }});
                     if(d.success) {{
