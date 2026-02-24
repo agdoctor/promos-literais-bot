@@ -130,7 +130,7 @@ async def handle_index(request):
         <main>
             <div id="tab-dashboard" class="tab-content active">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <img src="/assets/pudim_home_painel.png" alt="Literalmente Promo" style="max-width: 100%; height: auto; border-radius: 16px; box-shadow: 0 4px 12px rgba(255,102,163,0.2);">
+                    <img src="/assets/pudim_home_painel.png" alt="Literalmente Promo" style="width: 150px; height: 150px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 12px rgba(255,102,163,0.2);">
                 </div>
                 <div class="card">
                     <div class="card-title">🤖 Controle do Bot</div>
