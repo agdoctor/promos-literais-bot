@@ -91,10 +91,10 @@ async def handle_index(request):
                 font-size: 12px;
                 color: var(--success);
                 margin-top: 10px;
-                background: #1a271c;
-                padding: 8px;
-                border-radius: 6px;
-                border: 1px solid #2d4a31;
+                background: linear-gradient(135deg, rgba(212, 42, 120, 0.2), rgba(255, 102, 163, 0.1));
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid var(--accent);
             }}
         </style>
     </head>
