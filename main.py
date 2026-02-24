@@ -3,6 +3,8 @@ from monitor import start_monitoring
 from admin import start_admin_bot
 
 import sys
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 class LoggerWriter:
     def __init__(self, filename):

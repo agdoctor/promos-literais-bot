@@ -420,17 +420,17 @@ async def handle_index(request):
                 }}
             }}
 
-            function formatDoc(cmd, value=null) {
+            function formatDoc(cmd, value=null) {{
                 document.execCommand(cmd, false, value);
                 document.getElementById('final-text').focus();
-            }
-            function addLink() {
+            }}
+            function addLink() {{
                 const url = prompt('Cole o link:');
                 if(url) formatDoc('createLink', url);
-            }
-            function updatePreview() {
+            }}
+            function updatePreview() {{
                 // Not needed anymore since the editor is visual
-            }
+            }}
 
             async function previewLinks() {{
                 const container = document.getElementById('processed-links-container');
