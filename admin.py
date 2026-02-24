@@ -64,15 +64,11 @@ async def cmd_start(message: Message):
     # Salva o ID do admin no banco de dados para o monitor saber para quem mandar alertas
     set_config("admin_id", str(user_id))
     
-    await message.answer(
-        "🛠️ **Painel de Controle - Literalmente Promo**\n\n"
-        "O que você deseja gerenciar?",
-        reply_markup=get_main_keyboard(),
+    msg = await message.answer(
+        "🛠️ **Painel Admin**\n\nUse o botão no canto inferior esquerdo para abrir o painel interativo.",
+        reply_markup=ReplyKeyboardRemove(),
         parse_mode="Markdown"
     )
-    # Remove qualquer teclado físico residual (Menu de acesso rápido desativado)
-    # Enviamos uma mensagem temporária e apagamos na mesma hora para não poluir
-    msg = await message.answer("⏳", reply_markup=ReplyKeyboardRemove())
     try:
         await msg.delete()
     except:
@@ -1011,11 +1007,32 @@ async def global_error_handler(event: ErrorEvent):
 
 async def start_admin_bot():
     print("🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)")
+    
+    # Configurar menu de comandos
     await bot.set_my_commands([
-        BotCommand(command="start", description="Painel Admin"),
+        BotCommand(command="admin", description="Painel de Controle Admin"),
         BotCommand(command="enviar", description="Enviar Promoção via Link"),
+        BotCommand(command="log", description="Receber Logs do Bot"),
     ])
     
+    # Configurar o Botão de Menu (Canto inferior esquerdo) para abrir o Mini App
+    webapp_url = get_config("webapp_url")
+    console_token = get_config("console_token")
+    if webapp_url and console_token:
+        try:
+            from aiogram.types import MenuButtonWebApp, WebAppInfo
+            base_url = webapp_url.rstrip('/')
+            full_url = f"{base_url}/?token={console_token}"
+            await bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(
+                    text="🖥️ Admin / Painel",
+                    web_app=WebAppInfo(url=full_url)
+                )
+            )
+            print(f"✅ Botão de Menu configurado para: {full_url}")
+        except Exception as e:
+            print(f"⚠️ Erro ao configurar Botão de Menu: {e}")
+            
     # Enviar notificação de reinício
     try:
         admin_id_str = get_config("admin_id")

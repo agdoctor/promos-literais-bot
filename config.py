@@ -25,3 +25,6 @@ PROXY_URL = os.getenv("PROXY_URL")
 # Tratar os canais, permitindo múltiplos separados por vírgula no futuro
 SOURCE_CHANNELS = [c.strip() for c in os.getenv("SOURCE_CHANNELS", "").split(',') if c.strip()]
 TARGET_CHANNEL = os.getenv("TARGET_CHANNEL")
+
+WEBAPP_URL = os.getenv("WEBAPP_URL")
+CONSOLE_TOKEN = os.getenv("CONSOLE_TOKEN")

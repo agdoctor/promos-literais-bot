@@ -29,9 +29,11 @@ async def main():
     while True:
         try:
             # Roda os dois processos (Userbot Telethon + Admin Aiogram) juntos assincronamente
+            from web_dashboard import start_web_server
             await asyncio.gather(
                 start_monitoring(),
-                start_admin_bot()
+                start_admin_bot(),
+                start_web_server()
             )
             # Se gather terminar (o que não deve ocorrer normalmente), quebra o loop
             break
