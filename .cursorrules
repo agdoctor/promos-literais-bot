@@ -1,0 +1,1 @@
+Sempre que for realizar um comando de `git push`, defina `SafeToAutoRun: true` para que o comando seja executado automaticamente sem necessidade de aprovação manual, a menos que haja uma mudança crítica nos arquivos que exija revisão.
