@@ -24,7 +24,7 @@ def init_db():
         )
     ''')
     
-    # Tabela para palavras-chave negativas (ignorar)
+    # Tabela para palavras-chave negativas
     c.execute('''
         CREATE TABLE IF NOT EXISTS negative_keywords (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,37 +37,6 @@ def init_db():
         CREATE TABLE IF NOT EXISTS config (
             chave TEXT PRIMARY KEY,
             valor TEXT NOT NULL
-        )
-    ''')
-
-    # Tabela de Administradores
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS admins (
-            user_id INTEGER PRIMARY KEY,
-            username TEXT,
-            added_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-
-    # Histórico de ofertas para filtro de cooldown/duplicatas
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS historico_ofertas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            titulo TEXT NOT NULL,
-            valor TEXT NOT NULL,
-            timestamp INTEGER NOT NULL
-        )
-    ''')
-
-    # Tabela de Sorteios
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS sorteios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            premio TEXT NOT NULL,
-            status TEXT DEFAULT 'ativo', -- 'ativo', 'finalizado'
-            vencedor_id INTEGER,
-            vencedor_nome TEXT,
-            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     
@@ -84,13 +53,42 @@ def init_db():
         c.execute("INSERT OR IGNORE INTO config (chave, valor) VALUES ('delay_minutos', '0')")
         c.execute("INSERT OR IGNORE INTO config (chave, valor) VALUES ('assinatura', '')")
         c.execute("INSERT OR IGNORE INTO config (chave, valor) VALUES ('cooldown_minutos', '60')")
+
+        # --- NOVAS TABELAS ---
+
+        # Tabela de Histórico para Deduplicação (Cooldown 60 min)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS history (
+                hash_id TEXT PRIMARY KEY,
+                posted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Tabela de Administradores
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS admins (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT
+            )
+        ''')
+
+        # Tabela de Sorteios
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS sorteios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                premio TEXT NOT NULL,
+                status TEXT DEFAULT 'aberto', -- 'aberto', 'encerrado'
+                ganhador_id INTEGER,
+                ganhador_nome TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
     except:
         pass
         
     conn.commit()
     conn.close()
 
-# --- CANAIS ---
 def get_canais():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -99,11 +97,27 @@ def get_canais():
     conn.close()
     return canais
 
+def normalize_channel(nome: str) -> str:
+    """Extrai apenas o username de links ou remove o @."""
+    nome = nome.strip()
+    # Se for link do tipo https://t.me/username ou t.me/username
+    if "t.me/" in nome:
+        nome = nome.split("t.me/")[-1]
+    # Remove @ inicial se existir
+    if nome.startswith("@"):
+        nome = nome[1:]
+    # Remove barras finais se houver
+    nome = nome.split("/")[0]
+    return nome
+
 def add_canal(nome: str):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO canais (nome_ou_link) VALUES (?)", (nome.strip(),))
+        nome_limpo = normalize_channel(nome)
+        if not nome_limpo:
+            return False
+        c.execute("INSERT INTO canais (nome_ou_link) VALUES (?)", (nome_limpo,))
         conn.commit()
         return True
     except sqlite3.IntegrityError:
@@ -118,7 +132,6 @@ def remove_canal(nome: str):
     conn.commit()
     conn.close()
 
-# --- KEYWORDS ---
 def get_keywords():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -174,108 +187,6 @@ def remove_negative_keyword(kw: str):
     conn.commit()
     conn.close()
 
-# --- ADMINS ---
-def is_admin(user_id: int) -> bool:
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT user_id FROM admins WHERE user_id = ?", (user_id,))
-    row = c.fetchone()
-    conn.close()
-    
-    # Se a tabela estiver vazia, o primeiro que falar com o bot vira admin
-    if not row:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM admins")
-        count = c.fetchone()[0]
-        conn.close()
-        if count == 0:
-            return True # Permite o primeiro admin
-    return row is not None
-
-def add_admin(user_id: int, username: Optional[str] = None):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    try:
-        c.execute("INSERT OR IGNORE INTO admins (user_id, username) VALUES (?, ?)", (user_id, username))
-        conn.commit()
-        return True
-    except:
-        return False
-    finally:
-        conn.close()
-
-def get_admins():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT user_id, username FROM admins")
-    rows = c.fetchall()
-    conn.close()
-    return rows
-
-def remove_admin(user_id: int):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("DELETE FROM admins WHERE user_id = ?", (user_id,))
-    conn.commit()
-    conn.close()
-
-# --- HISTÓRICO DE OFERTAS (COOLDOWN) ---
-def check_duplicate(titulo: str, valor: str, window_minutes: int = 60) -> bool:
-    """Verifica se uma oferta similar foi postada nos últimos X minutos."""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    limit_ts = int(time.time()) - (window_minutes * 60)
-    
-    # Busca por título idêntico ou valor idêntico no mesmo período
-    # Para ser mais robusto, comparamos título E valor.
-    c.execute('''
-        SELECT id FROM historico_ofertas 
-        WHERE titulo = ? AND valor = ? AND timestamp > ?
-    ''', (titulo.strip(), valor.strip(), limit_ts))
-    
-    row = c.fetchone()
-    conn.close()
-    return row is not None
-
-def add_to_history(titulo: str, valor: str):
-    """Adiciona uma oferta ao histórico."""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        INSERT INTO historico_ofertas (titulo, valor, timestamp) 
-        VALUES (?, ?, ?)
-    ''', (titulo.strip(), valor.strip(), int(time.time())))
-    conn.commit()
-    conn.close()
-
-# --- SORTEIOS ---
-def create_sorteio(premio: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT INTO sorteios (premio) VALUES (?)", (premio,))
-    conn.commit()
-    conn.close()
-
-def get_active_sorteios():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT id, premio, criado_em FROM sorteios WHERE status = 'ativo'")
-    rows = c.fetchall()
-    conn.close()
-    return rows
-
-def finalize_sorteio(sorteio_id: int, vencedor_id: int, vencedor_nome: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        UPDATE sorteios 
-        SET status = 'finalizado', vencedor_id = ?, vencedor_nome = ? 
-        WHERE id = ?
-    ''', (vencedor_id, vencedor_nome, sorteio_id))
-    conn.commit()
-    conn.close()
-
 # --- CONFIGURAÇÕES GERAIS ---
 def get_config(chave: str) -> str:
     """Busca o valor string de uma configuração. Retorna string vazia se não achar."""
@@ -296,6 +207,89 @@ def set_config(chave: str, valor: str):
         ON CONFLICT(chave) 
         DO UPDATE SET valor=excluded.valor
     ''', (chave, str(valor)))
+    conn.commit()
+    conn.close()
+
+# --- FUNÇÕES DE HISTÓRICO (DEDUPLICAÇÃO) ---
+def check_duplicate(hash_id: str) -> bool:
+    """Verifica se uma oferta com esse hash foi postada nos últimos 60 minutos."""
+    import datetime
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    # Limpa registros antigos antes de checar (mais de 60 min)
+    limite = (datetime.datetime.now() - datetime.timedelta(minutes=60)).strftime('%Y-%m-%d %H:%M:%S')
+    c.execute("DELETE FROM history WHERE posted_at < ?", (limite,))
+    
+    c.execute("SELECT 1 FROM history WHERE hash_id = ?", (hash_id,))
+    res = c.fetchone()
+    conn.commit()
+    conn.close()
+    return res is not None
+
+def add_to_history(hash_id: str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO history (hash_id) VALUES (?)", (hash_id,))
+    conn.commit()
+    conn.close()
+
+# --- FUNÇÕES DE ADMINS ---
+def get_admins():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT user_id, username FROM admins")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def add_admin(user_id: int, username: str = ""):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO admins (user_id, username) VALUES (?, ?)", (user_id, username))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+def remove_admin(user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM admins WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+def is_admin(user_id: int) -> bool:
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT 1 FROM admins WHERE user_id = ?", (user_id,))
+    res = c.fetchone()
+    conn.close()
+    return res is not None
+
+# --- FUNÇÕES DE SORTEIOS ---
+def create_giveaway(premio: str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO sorteios (premio) VALUES (?)", (premio,))
+    conn.commit()
+    conn.close()
+
+def get_active_giveaways():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id, premio FROM sorteios WHERE status = 'aberto'")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def close_giveaway(giveaway_id: int, winner_id: int, winner_name: str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE sorteios SET status = 'encerrado', ganhador_id = ?, ganhador_nome = ? WHERE id = ?", 
+              (winner_id, winner_name, giveaway_id))
     conn.commit()
     conn.close()
 
