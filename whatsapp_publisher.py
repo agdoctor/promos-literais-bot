@@ -56,17 +56,15 @@ def send_whatsapp_msg(text: str, media_path: str | None = None):
     Envia uma mensagem para o WhatsApp via Green-API.
     Suporta texto e imagem (via Upload).
     """
-    try:
-        from database import get_config
-    except ImportError:
-        # Fallback caso database não exista no contexto (improvável, mas seguro)
-        def get_config(x): return ""
+    from database import get_config
     
     # Busca configurações e limpa espaços (Prioridade: Banco de dados > Config.py/Env)
     db_enabled = get_config("whatsapp_enabled").lower() == "true"
     enabled = db_enabled or WHATSAPP_ENABLED
     
     instance_id = (get_config("green_api_instance_id") or GREEN_API_INSTANCE_ID or "").strip()
+    # Garante que o instance_id tenha apenas os números
+    instance_id_clean = instance_id.replace("waInstance", "")
     token = (get_config("green_api_token") or GREEN_API_TOKEN or "").strip()
     host = (get_config("green_api_host") or GREEN_API_HOST or "api.green-api.com").strip()
     destination = (get_config("whatsapp_destination") or WHATSAPP_DESTINATION or "").strip()
@@ -75,8 +73,8 @@ def send_whatsapp_msg(text: str, media_path: str | None = None):
         print("⚠️ WhatsApp desabilitado nas configurações.")
         return None
 
-    if not instance_id or not token or not destination:
-        print(f"⚠️ Faltam credenciais: ID={instance_id}, Destino='{destination}'")
+    if not instance_id_clean or not token or not destination:
+        print(f"⚠️ Faltam credenciais: ID={instance_id_clean}, Destino='{destination}'")
         return None
 
     # Limpar o host: remove protocolos, barras e corrige falta de hífen em 'greenapi'
@@ -84,40 +82,120 @@ def send_whatsapp_msg(text: str, media_path: str | None = None):
     if "greenapi.com" in host_clean and "green-api.com" not in host_clean:
         host_clean = host_clean.replace("greenapi.com", "green-api.com")
     
-    print(f"📡 Tentando enviar para WhatsApp: Host={host_clean}, Instance={instance_id}, Destino={destination}")
-
-    try:
-        # Se houver mídia local, fazemos o upload
-        if media_path and os.path.exists(media_path):
-            url = f"https://{host_clean}/waInstance{instance_id}/sendFileByUpload/{token}"
-            
-            payload = {
-                'chatId': destination,
-                'caption': text
-            }
-            
-            files = [
-                ('file', (os.path.basename(media_path), open(media_path, 'rb'), 'image/jpeg'))
-            ]
-            
-            response = requests.post(url, data=payload, files=files, timeout=30)
-        else:
-            # Caso contrário, apenas texto
-            url = f"https://{host_clean}/waInstance{instance_id}/sendMessage/{token}"
-            payload = {
-                "chatId": destination,
-                "message": text
-            }
-            headers = {'Content-Type': 'application/json'}
-            response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=20)
-        
-        if response.status_code == 200:
-            print("✅ Mensagem enviada para o WhatsApp com sucesso!")
-            return response.json()
-        else:
-            print(f"❌ Erro Green-API ({response.status_code}): {response.text}")
-            return None
-
-    except Exception as e:
-        print(f"❌ Erro ao enviar para WhatsApp: {e}")
+    destinations = [d.strip() for d in destination.split(",") if d.strip()]
+    if not destinations:
+        print("⚠️ Nenhuma conta de destino válida encontrada.")
         return None
+
+    import time
+    responses = []
+    common_headers = {'Accept': 'application/json'}
+    
+    for idx, dest in enumerate(destinations):
+        if idx > 0:
+            print(f"⏳ Aguardando 1.5s antes de enviar para o próximo grupo ({idx+1}/{len(destinations)})...")
+            time.sleep(1.5)
+            
+        print(f"📡 Tentando enviar para WhatsApp ({dest}): Host={host_clean}, Instance={instance_id_clean}")
+
+        try:
+            # Se houver mídia local, fazemos o upload
+            if media_path and os.path.exists(media_path):
+                url = f"https://{host_clean}/waInstance{instance_id_clean}/sendFileByUpload/{token}"
+                
+                payload = {
+                    'chatId': dest,
+                    'caption': text
+                }
+                
+                files = [
+                    ('file', (os.path.basename(media_path), open(media_path, 'rb'), 'image/jpeg'))
+                ]
+                
+                response = requests.post(url, data=payload, files=files, headers=common_headers, timeout=30)
+            else:
+                # Caso contrário, apenas texto
+                url = f"https://{host_clean}/waInstance{instance_id_clean}/sendMessage/{token}"
+                payload = {
+                    "chatId": dest,
+                    "message": text
+                }
+                headers = {**common_headers, 'Content-Type': 'application/json'}
+                response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=20)
+            
+            if response.status_code == 200:
+                print(f"✅ Mensagem enviada para {dest} com sucesso!")
+                responses.append(response.json())
+            else:
+                print(f"❌ Erro Green-API para {dest} ({response.status_code}): {response.text}")
+        except Exception as e:
+            print(f"❌ Erro ao enviar para {dest}: {e}")
+
+    return responses if responses else None
+
+def get_whatsapp_group_info(invite_link: str):
+    """
+    Tenta obter informações de um grupo (incluindo o ID) a partir do link de convite.
+    Usa o método da Green-API: getGroupDataFromInviteLink
+    """
+    from database import get_config
+    
+    instance_id = (get_config("green_api_instance_id") or GREEN_API_INSTANCE_ID or "").strip()
+    # Garante que o instance_id tenha apenas os números
+    instance_id_clean = "".join(filter(str.isdigit, instance_id))
+    token = (get_config("green_api_token") or GREEN_API_TOKEN or "").strip()
+    host = (get_config("green_api_host") or GREEN_API_HOST or "api.green-api.com").strip()
+
+    if not instance_id_clean or not token:
+        return {"error": "Faltam credenciais da Green-API (Instance ID ou Token)."}
+
+    # Limpar o host
+    host_clean = host.replace("https://", "").replace("http://", "").strip("/")
+    if "greenapi.com" in host_clean and "green-api.com" not in host_clean:
+        host_clean = host_clean.replace("greenapi.com", "green-api.com")
+        
+    url = f"https://{host_clean}/waInstance{instance_id_clean}/getGroupDataFromInviteLink/{token}"
+    payload = {"inviteLink": invite_link}
+    headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=20)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            return {"error": "Erro Green-API (403): O link pode ser inválido ou o método não é suportado pelo seu plano ( Tariff DEVELOPER)."}
+        else:
+            return {"error": f"Erro Green-API ({response.status_code}): {response.text}"}
+    except Exception as e:
+        return {"error": f"Erro de conexão: {str(e)}"}
+
+def list_whatsapp_groups():
+    """Retorna uma lista de grupos que a conta Green-API participa."""
+    from database import get_config
+    
+    instance_id = (get_config("green_api_instance_id") or GREEN_API_INSTANCE_ID or "").strip()
+    instance_id_clean = "".join(filter(str.isdigit, instance_id))
+    token = (get_config("green_api_token") or GREEN_API_TOKEN or "").strip()
+    host = (get_config("green_api_host") or GREEN_API_HOST or "api.green-api.com").strip()
+
+    if not instance_id_clean or not token:
+        return {"error": "Faltam credenciais da Green-API."}
+
+    host_clean = host.replace("https://", "").replace("http://", "").strip("/")
+    url = f"https://{host_clean}/waInstance{instance_id_clean}/getGroups/{token}"
+    
+    try:
+        response = requests.get(url, timeout=20)
+        if response.status_code == 200:
+            groups = response.json()
+            # Filtra apenas grupos onde o usuário é administrador
+            # A Green-API retorna isAdmin: True/False no método getGroups
+            admin_groups = [g for g in groups if g.get("isAdmin") is True]
+            return {"groups": admin_groups}
+        else:
+            return {"error": f"Erro Green-API ({response.status_code}): {response.text}"}
+    except Exception as e:
+        return {"error": f"Erro de conexão: {str(e)}"}

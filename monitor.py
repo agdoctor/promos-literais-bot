@@ -77,7 +77,12 @@ async def worker_queue():
                         msg_conclusao += f"📥 [Fonte Original]({source_url})\n"
                     msg_conclusao += f"📤 [Postagem no Canal]({target_url})"
                     
-                    await bot.send_message(chat_id=int(admin_id_str), text=msg_conclusao, parse_mode="Markdown", disable_web_page_preview=True)
+                    if media_path and os.path.exists(media_path):
+                        from aiogram.types import FSInputFile
+                        photo = FSInputFile(media_path)
+                        await bot.send_photo(chat_id=int(admin_id_str), photo=photo, caption=msg_conclusao, parse_mode="Markdown")
+                    else:
+                        await bot.send_message(chat_id=int(admin_id_str), text=msg_conclusao, parse_mode="Markdown", disable_web_page_preview=True)
                 except Exception as e:
                     print(f"Aviso ao notificar admin na conclusao: {e}")
             
