@@ -198,11 +198,15 @@ async def fetch_product_metadata(url: str) -> dict:
                         from affiliate import get_shopee_product_info
                         shopee_info = await get_shopee_product_info(url)
                         if shopee_info and shopee_info.get("title"):
-                            title = shopee_info["title"]
-                            metadata["title"] = title
-                            metadata["image_url"] = shopee_info.get("image", metadata["image_url"])
-                            print(f"✅ Metadados recuperados via API Shopee: {metadata['title'][:50]}...")
-                            is_invalid = False # Recuperado!
+                            metadata["title"] = shopee_info["title"]
+                            metadata["image_url"] = shopee_info.get("image", "") or ""
+                            print(f"✅ Metadados recuperados via API Shopee: {metadata['title'][:60]}")
+                            # Baixar imagem se disponível
+                            if metadata["image_url"]:
+                                metadata["local_image_path"] = await download_image(metadata["image_url"])
+                            return metadata  # Retorna imediatamente, sem continuar o loop
+                        else:
+                            print(f"❌ API Shopee retornou vazio. Configure SHOPEE_APP_ID e SHOPEE_APP_SECRET no Painel Web.")
                     except Exception as e:
                         print(f"❌ Erro no fallback da API Shopee: {e}")
 
