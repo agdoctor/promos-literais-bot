@@ -31,7 +31,6 @@ def clean_url(url: str) -> str:
         # Remove tudo após o código MLB ou o fim da URL do produto
         if "?" in url:
             return url.split("?")[0]
-10: 
 
     if "magazineluiza.com.br" in url or "magalu.com" in url:
         if "?" in url: return url.split("?")[0]
@@ -199,7 +198,8 @@ async def fetch_product_metadata(url: str) -> dict:
                         from affiliate import get_shopee_product_info
                         shopee_info = await get_shopee_product_info(url)
                         if shopee_info and shopee_info.get("title"):
-                            metadata["title"] = shopee_info["title"]
+                            title = shopee_info["title"]
+                            metadata["title"] = title
                             metadata["image_url"] = shopee_info.get("image", metadata["image_url"])
                             print(f"✅ Metadados recuperados via API Shopee: {metadata['title'][:50]}...")
                             is_invalid = False # Recuperado!

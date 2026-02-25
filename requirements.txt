@@ -8,3 +8,4 @@ Pillow
 beautifulsoup4
 aiohttp
 requests
+curl_cffi
