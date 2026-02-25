@@ -365,6 +365,85 @@ async def convert_shopee_fallback_manual(original_url: str) -> str:
         
     return clean_tracking_params(original_url)
 
+async def get_shopee_product_info(url: str):
+    """
+    Busca informações detalhadas do produto (título e imagem) via API oficial.
+    Requer SHOPEE_APP_ID e SHOPEE_APP_SECRET.
+    """
+    import config
+    import json
+    import time
+    import hashlib
+    
+    app_id = getattr(config, 'SHOPEE_APP_ID', None)
+    app_secret = getattr(config, 'SHOPEE_APP_SECRET', None)
+    
+    if not app_id or not app_secret:
+        return None
+
+    # Extrair Item ID da URL expandida ou original
+    item_id = None
+    # Padrao 1: /product/SHOP_ID/ITEM_ID
+    match1 = re.search(r'shopee\.com\.br/product/\d+/(\d+)', url)
+    if match1:
+        item_id = match1.group(1)
+    else:
+        # Padrao 2: -i.SHOP_ID.ITEM_ID
+        match2 = re.search(r'-i\.\d+\.(\d+)', url)
+        if match2:
+            item_id = match2.group(1)
+            
+    if not item_id:
+        return None
+
+    api_url = "https://open-api.affiliate.shopee.com.br/graphql"
+    
+    # Query para buscar detalhes do produto
+    # productOfferV2 e ideal porque aceita itemIds e retorna dados de afiliado
+    query = """
+    query ($itemIds: [Long]!) {
+      productOfferV2(itemIds: $itemIds) {
+        nodes {
+          itemName
+          imageUrl
+          price
+        }
+      }
+    }
+    """
+    variables = {"itemIds": [int(item_id)]}
+    body = json.dumps({"query": query, "variables": variables}, separators=(',', ':'))
+    timestamp = int(time.time())
+    
+    # Algoritmo Oficial: SHA256(AppId + Timestamp + Body + Secret)
+    base_str = f"{app_id}{timestamp}{body}{app_secret}"
+    signature = hashlib.sha256(base_str.encode('utf-8')).hexdigest()
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"SHA256 Credential={app_id}, Signature={signature}, Timestamp={timestamp}"
+    }
+
+    try:
+        print(f"Buscando metadados Shopee via API Oficial para item {item_id}...")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(api_url, headers=headers, content=body)
+            if response.status_code == 200:
+                data = response.json()
+                nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
+                if nodes:
+                    prod = nodes[0]
+                    return {
+                        "title": prod.get("itemName"),
+                        "image": prod.get("imageUrl")
+                    }
+            else:
+                print(f"[!] Erro API Shopee Info ({response.status_code}): {response.text}")
+    except Exception as e:
+        print(f"[!] Erro ao buscar info Shopee via API: {e}")
+        
+    return None
+
 async def convert_to_affiliate(url: str) -> str:
     """
     Identifica a loja e aplica a lógica de conversão correspondente.
