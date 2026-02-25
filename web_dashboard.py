@@ -846,7 +846,14 @@ async def handle_sorteios_api(request):
 
 async def handle_settings_api(request):
     if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
-    if request.method == 'GET': return web.json_response({"valor": get_config(request.query.get('key'))})
+    if request.method == 'GET':
+        key = request.query.get('key')
+        db_val = get_config(key)
+        # Se não tem no banco, tenta ler do config.py (env vars)
+        if not db_val and key:
+            import config as _conf
+            db_val = str(getattr(_conf, key, '') or '')
+        return web.json_response({"valor": db_val or ''})
     elif request.method == 'POST':
         data = await request.json(); set_config(data['chave'], str(data['valor']))
         return web.json_response({"success": True})

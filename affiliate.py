@@ -40,8 +40,11 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
     Converte um link do Mercado Livre em link de afiliado usando a Stripe API.
     Lida com links de vitrine (/social/) extraindo o produto destacado.
     """
-    if not ML_AFFILIATE_COOKIE:
-        print("[!] ML_AFFILIATE_COOKIE nao configurado. Mantendo link original.")
+    import config
+    from database import get_config
+    ml_cookie = get_config("ML_AFFILIATE_COOKIE") or getattr(config, 'ML_AFFILIATE_COOKIE', None)
+    if not ml_cookie:
+        print("[!] ML_AFFILIATE_COOKIE nao configurado. Configure no Painel > Afiliados.")
         return original_url
 
     parsed = urlparse(original_url)
@@ -96,7 +99,7 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
         async with httpx.AsyncClient(timeout=10.0) as api_client:
             api_headers = {
                 'Content-Type': 'application/json',
-                'Cookie': ML_AFFILIATE_COOKIE,
+                'Cookie': ml_cookie,
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'application/json, text/plain, */*',
                 'Origin': 'https://www.mercadolivre.com.br',
@@ -141,9 +144,10 @@ async def convert_aliexpress_to_affiliate(original_url: str) -> str:
     Converte um link do AliExpress para link de afiliado usando a API oficial (Open Platform).
     """
     import config
-    ALI_APP_KEY = config.ALI_APP_KEY
-    ALI_APP_SECRET = config.ALI_APP_SECRET
-    ALI_TRACKING_ID = config.ALI_TRACKING_ID
+    from database import get_config
+    ALI_APP_KEY = get_config("ALI_APP_KEY") or getattr(config, 'ALI_APP_KEY', None)
+    ALI_APP_SECRET = get_config("ALI_APP_SECRET") or getattr(config, 'ALI_APP_SECRET', None)
+    ALI_TRACKING_ID = get_config("ALI_TRACKING_ID") or getattr(config, 'ALI_TRACKING_ID', None)
 
     # Normalizar URL: se for um link sujo de moedas (coin-index) com productIds na URL, a gente limpa
     clean_url = original_url
@@ -462,7 +466,9 @@ async def convert_to_affiliate(url: str) -> str:
     
     # Amazon
     if 'amazon.com.br' in domain or 'amazon.com' in domain:
-        from config import AMAZON_TAG
+        import config
+        from database import get_config as _get_cfg
+        AMAZON_TAG = _get_cfg("AMAZON_TAG") or getattr(config, 'AMAZON_TAG', '')
         
         # Tenta extrair o ASIN (10 caracteres alfanuméricos)
         # Padrões comuns: /dp/ASIN, /gp/product/ASIN, /exec/obidos/ASIN
@@ -471,7 +477,7 @@ async def convert_to_affiliate(url: str) -> str:
         
         if asin:
             # Reconstrói a URL no formato mais curto possível
-            new_url = f"https://{parsed.netloc}/dp/{asin}?tag={AMAZON_TAG}"
+            new_url = f"https://{parsed.netloc}/dp/{asin}?tag={AMAZON_TAG}" if AMAZON_TAG else f"https://{parsed.netloc}/dp/{asin}"
             print(f"[OK] Link Amazon encurtado via ASIN ({asin}): {new_url}")
             return new_url
 
