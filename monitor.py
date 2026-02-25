@@ -9,6 +9,7 @@ from database import get_canais, get_keywords, get_config, check_duplicate, add_
 from rewriter import reescrever_promocao, extrair_nome_produto
 from links import process_and_replace_links, extract_urls
 from scraper import extract_price, fetch_product_metadata
+from telethon.errors import AuthKeyDuplicatedError
 from datetime import datetime, timedelta, timezone
 from publisher import publish_deal, bot
 from watermark import apply_watermark
@@ -441,6 +442,9 @@ async def start_monitoring():
             if not client.is_connected():
                 await client.connect()
             await client.run_until_disconnected()
+        except AuthKeyDuplicatedError as e:
+            print(f"🛑🛑 AuthKeyDuplicatedError: A sessão (StringSession) foi revogada ou está sendo usada em outro lugar! CUIDADO COM BAN! Pausando por 5 MINUTOS... Erro: {e}")
+            await asyncio.sleep(300) # Pausa gigantesca para evitar Flood Wait do Telegram
         except Exception as connection_error:
             print(f"⚠️ Aviso: Telethon desconectado. Reconectando em 10 segundos... Motivo: {connection_error}")
             await asyncio.sleep(10)

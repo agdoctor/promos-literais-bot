@@ -127,6 +127,24 @@ async def handle_index(request):
             <div class="nav-item" onclick="showTab('settings', this)">⚙️ Config</div>
             <div class="nav-item" onclick="showTab('logs', this)">📜 Logs</div>
         </div>
+        
+        <!-- Modal de Reinicialização -->
+        <div id="restart-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+            <div style="background:var(--bg-sec); border:1px solid var(--accent); border-radius:16px; padding:30px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(255,102,163,0.2);">
+                <div id="restart-icon" style="font-size:40px; margin-bottom:15px; animation:spin 2s linear infinite;">🔄</div>
+                <h3 id="restart-title" style="margin:0 0 10px 0; color:var(--text);">Reiniciando Sistema...</h3>
+                <p id="restart-status" style="font-size:14px; color:var(--text-dim); margin-bottom:20px;">Aguarde, conectando ao servidor...</p>
+                <div id="p-container" style="width:100%; height:8px; background:var(--bg-main); border-radius:4px; overflow:hidden;">
+                    <div id="p-bar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent), var(--success)); transition:width 0.4s ease;"></div>
+                </div>
+                <div id="restart-check" style="display:none; font-size:50px; color:var(--success); animation:popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">✅</div>
+            </div>
+        </div>
+        <style>
+            @keyframes spin {{ 100% {{ transform:rotate(360deg); }} }}
+            @keyframes popIn {{ 0% {{ opacity:0; transform:scale(0.5); }} 100% {{ opacity:1; transform:scale(1); }} }}
+        </style>
+
         <main>
             <div id="tab-dashboard" class="tab-content active">
                 <div style="text-align: center; margin-bottom: 20px;">
@@ -349,9 +367,76 @@ async def handle_index(request):
             async function restartBot() {{
                 Telegram.WebApp.showConfirm("Deseja reiniciar o bot? O painel ficará offline por alguns segundos.", async (ok) => {{
                     if(ok) {{
-                        await api('restart', 'POST'); 
-                        Telegram.WebApp.showAlert("Solicitação enviada! O bot irá reiniciar em instantes.");
-                        setTimeout(() => Telegram.WebApp.close(), 2000);
+                        const modal = document.getElementById('restart-modal');
+                        const bar = document.getElementById('p-bar');
+                        const check = document.getElementById('restart-check');
+                        const title = document.getElementById('restart-title');
+                        const container = document.getElementById('p-container');
+                        const status = document.getElementById('restart-status');
+                        
+                        modal.style.display = 'flex';
+                        
+                        // Iniciar chamada de restart
+                        api('restart', 'POST').catch(e => console.log("Reiniciando...")); 
+
+                        let progress = 0;
+                        let isOnline = false;
+                        
+                        // Atualiza a barra de forma fluida até cerca de 90%
+                        const barInterval = setInterval(() => {{
+                            if (isOnline) {{
+                                progress += 20; // Avanço super rápido quando já online
+                            }} else {{
+                                // Avanço lento antes de bater 90%
+                                if (progress < 90) {{
+                                    progress += Math.random() * 2 + 1;
+                                }}
+                            }}
+                            
+                            if (progress >= 100) {{
+                                progress = 100;
+                                clearInterval(barInterval);
+                                finishRestart();
+                            }}
+                            
+                            bar.style.width = progress + '%';
+                        }}, 400);
+
+                        // Polling para checar ativamente se voltou
+                        let attempts = 0;
+                        const checkInterval = setInterval(async () => {{
+                            attempts++;
+                            // Evitar checar no primeiro segundo se estiver caindo ainda
+                            if (attempts > 2) {{
+                                try {{
+                                    const d = await api('status');
+                                    if (d.canais_count !== undefined) {{
+                                        isOnline = true; // Avisa a barra para acelerar
+                                        status.textContent = "Servidor online! Concluindo...";
+                                        clearInterval(checkInterval);
+                                    }}
+                                }} catch(e) {{
+                                    // Segue offline
+                                    if(attempts > 30) {{ // Desistir após ~30s
+                                        isOnline = true;
+                                        clearInterval(checkInterval);
+                                    }}
+                                }}
+                            }}
+                        }}, 1000);
+
+                        function finishRestart() {{
+                            bar.style.width = '100%';
+                            container.style.display = 'none';
+                            check.style.display = 'block';
+                            title.textContent = "Sistema Online!";
+                            status.textContent = "Sincronização concluída. Recarregando...";
+                            
+                            setTimeout(() => {{
+                                // Forçar recarregamento total da página para limpar cache e renovar socket/token
+                                window.location.reload();
+                            }}, 2000);
+                        }}
                     }}
                 }});
             }}
@@ -702,11 +787,18 @@ async def handle_restart_api(request):
     if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
     print("🔄 Reinicialização do Bot solicitada via Dashboard...")
     sys.stdout.flush()
-    # Força a saída do processo após 2 segundos para dar tempo do dashboard receber o OK
-    def terminate():
-        print("💀 Encerrando processo para reinício automático...")
-        os._exit(1) # Saída com erro costuma forçar o restart em plataformas como SquareCloud
-    asyncio.get_event_loop().call_later(2.0, terminate)
+    
+    def restart_process():
+        print("💀 Encerrando processo e iniciando um novo...")
+        sys.stdout.flush()
+        try:
+            # Substitui o processo atual por um novo processo python executando o mesmo script
+            os.execv(sys.executable, ['python'] + sys.argv)
+        except Exception as e:
+            print(f"❌ Falha ao tentar reiniciar o processo: {e}")
+            os._exit(1)
+
+    asyncio.get_event_loop().call_later(2.0, restart_process)
     return web.json_response({"success": True, "message": "Bot reiniciando..."})
 
 async def handle_canais_api(request):
@@ -1000,8 +1092,23 @@ async def start_web_server():
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    print(f"🌐 Dashboard rodando na porta {port}")
+    
+    # Retry loop para bind de porta (evita erro fatal se reiniciar muito rápido)
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            await site.start()
+            print(f"🌐 Dashboard rodando na porta {port}")
+            break
+        except OSError as e:
+            if e.errno == 10048 or "Address already in use" in str(e):
+                if attempt < max_retries - 1:
+                    print(f"⚠️ Porta {port} ocupada. Tentativa {attempt + 1}/{max_retries} - Aguardando 5s...")
+                    await asyncio.sleep(5)
+                    continue
+            print(f"❌ Erro fatal ao iniciar Dashboard na porta {port}: {e}")
+            raise
+            
     try:
         while True: await asyncio.sleep(3600)
     except asyncio.CancelledError:

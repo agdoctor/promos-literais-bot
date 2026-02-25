@@ -812,12 +812,15 @@ async def global_error_handler(event: ErrorEvent):
 async def start_admin_bot():
     print("🤖 Painel Admin do Bot iniciado (Aguardando /admin no Telegram)")
     
-    # Configurar menu de comandos
-    await bot.set_my_commands([
-        BotCommand(command="admin", description="Painel de Controle Admin"),
-        BotCommand(command="enviar", description="Enviar Promoção via Link"),
-        BotCommand(command="log", description="Receber Logs do Bot"),
-    ])
+    # Configurar menu de comandos com try-except (evita crash global por rate-limit)
+    try:
+        await bot.set_my_commands([
+            BotCommand(command="admin", description="Painel de Controle Admin"),
+            BotCommand(command="enviar", description="Enviar Promoção via Link"),
+            BotCommand(command="log", description="Receber Logs do Bot"),
+        ])
+    except Exception as e:
+        print(f"⚠️ Erro ao configurar comandos: {e}")
     
     # Configurar o Botão de Menu (Canto inferior esquerdo) para abrir o Mini App
     webapp_url = get_config("webapp_url")
