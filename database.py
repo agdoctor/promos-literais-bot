@@ -293,5 +293,10 @@ def close_giveaway(giveaway_id: int, winner_id: int, winner_name: str):
     conn.commit()
     conn.close()
 
+# Aliases para compatibilidade com o literalmente_bot
+get_active_sorteios = get_active_giveaways
+create_sorteio = create_giveaway
+finalize_sorteio = close_giveaway
+
 # Inicializa o banco ao importar
 init_db()
