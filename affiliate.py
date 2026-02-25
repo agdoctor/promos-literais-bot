@@ -392,13 +392,34 @@ async def get_shopee_product_info(url: str):
     if match1:
         item_id = match1.group(1)
     else:
-        # Padrao 2: -i.SHOP_ID.ITEM_ID
-        match2 = re.search(r'-i\.\d+\.(\d+)', url)
-        if match2:
-            item_id = match2.group(1)
-            
+    # --- Expandir links curtos ---
+    working_url = url
+    if any(d in url for d in ['s.shopee', 'shope.ee', 'shopee.page.link']):
+        try:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as c:
+                r = await c.get(url)
+                working_url = str(r.url)
+                print(f"[Shopee] URL expandida: {working_url[:120]}")
+        except Exception as e:
+            print(f"[Shopee] Falha ao expandir URL curta: {e}")
+
+    # Extrair Item ID de varios formatos
+    item_id = None
+    m = re.search(r'-i\.(\d+)\.(\d+)', working_url)
+    if m:
+        item_id = m.group(2)
     if not item_id:
+        m = re.search(r'shopee\.com\.br/[^?]+/(\d+)/(\d+)', working_url)
+        if m:
+            item_id = m.group(2)
+    if not item_id:
+        m = re.search(r'[?&]itemid=(\d+)', working_url, re.IGNORECASE)
+        if m:
+            item_id = m.group(1)
+    if not item_id:
+        print(f"[Shopee API] Nao foi possivel extrair item_id da URL: {working_url[:120]}")
         return None
+    print(f"[Shopee API] Buscando produto item_id={item_id}")
 
     api_url = "https://open-api.affiliate.shopee.com.br/graphql"
     
