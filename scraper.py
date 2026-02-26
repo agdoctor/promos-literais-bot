@@ -1,4 +1,4 @@
-﻿from curl_cffi.requests import AsyncSession
+from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
 import os
 import re
@@ -10,7 +10,7 @@ from typing import Dict, List, Any, Optional
 from config import PROXY_URL
 
 def clean_amazon_url(url: str) -> str:
-    """Limpa parâmetros de rastreio da Amazon."""
+    """Limpa parmetros de rastreio da Amazon."""
     match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url)
     if match:
         asin = match.group(1)
@@ -18,7 +18,7 @@ def clean_amazon_url(url: str) -> str:
     return url
 
 def clean_url(url: str) -> str:
-    """Limpa parâmetros de rastreio de diversas lojas para evitar bloqueios por WAF."""
+    """Limpa parmetros de rastreio de diversas lojas para evitar bloqueios por WAF."""
     if "amazon.com.br" in url:
         return clean_amazon_url(url)
     
@@ -52,11 +52,9 @@ async def expand_url(url: str) -> str:
             print(f"[Expand] Falha ao expandir {url}: {e}")
     return url
 
-def get_random_browser(mobile=False) -> str:
-    """Retorna um perfil de navegador aleatório suportado pelo curl_cffi."""
-    if mobile:
-        return random.choice(["android110", "chrome_android120"])
-    return random.choice(["chrome110", "chrome116", "chrome120", "chrome124", "safari15_5"])
+def get_random_browser() -> str:
+    """Retorna um perfil de navegador aleatrio suportado pelo curl_cffi."""
+    return random.choice(["chrome110", "chrome116", "chrome120"])
 
 async def download_image(url: str, session: Optional[AsyncSession] = None) -> Optional[str]:
     """Downloads an image from a URL and returns the local path."""
@@ -75,18 +73,18 @@ async def download_image(url: str, session: Optional[AsyncSession] = None) -> Op
                 f.write(res.content)
             return file_name
     except Exception as e:
-        print(f"❌ Erro ao baixar imagem ({url[:50]}...): {e}")
+        print(f"Erro ao baixar imagem ({url[:50]}...): {e}")
     return None
 
 async def fetch_product_metadata(url: str) -> dict:
     """
-    Extração robusta de metadados com bypass TLS e fallbacks múltiplos.
+    Extrao robusta de metadados com bypass TLS e fallbacks mltiplos.
     """
     # 1. Expandir URL antes de tudo para o slug funcionar
     url = await expand_url(url)
     url = clean_url(url)
     
-    print(f"🔍 [SmartScraper TLS] Iniciando extração: {url[:120]}")
+    print(f"[SmartScraper TLS] Iniciando extracao: {url[:120]}")
 
     max_retries = 3
     metadata = {
@@ -96,11 +94,11 @@ async def fetch_product_metadata(url: str) -> dict:
         "status_code": 200
     }
 
-    # --- Pré-extrair título do slug (fallback garantido para Shopee) ---
+    # --- Pr-extrair ttulo do slug (fallback garantido para Shopee) ---
     shopee_slug_title = None
     if "shopee.com.br" in url:
         try:
-            # Padrões possíveis:
+            # Padres possveis:
             # A. shopee.com.br/Nome-do-Produto-i.123.456
             # B. shopee.com.br/product/123/456
             # C. shopee.com.br/slug/123/456
@@ -110,7 +108,7 @@ async def fetch_product_metadata(url: str) -> dict:
             # Remove o sufixo -i.SHOP_ID.ITEM_ID se existir
             slug = re.sub(r'-i\.\d+\.\d+$', '', last_part)
             
-            # Se for número, olha 2 posições antes
+            # Se for nmero, olha 2 posies antes
             if slug.isdigit() and len(path_segments) >= 4:
                 candidate = path_segments[-3]
                 if candidate != "product":
@@ -120,7 +118,7 @@ async def fetch_product_metadata(url: str) -> dict:
                 candidate = slug.replace('-', ' ').strip()
                 if len(candidate) > 3:
                     shopee_slug_title = candidate
-                    print(f"[Shopee Slug] Pré-extraído: {shopee_slug_title[:60]}")
+                    print(f"[Shopee Slug] Pr-extrado: {shopee_slug_title[:60]}")
         except Exception:
             pass
 
@@ -133,25 +131,29 @@ async def fetch_product_metadata(url: str) -> dict:
 
     for attempt in range(max_retries):
         is_shopee = "shopee.com.br" in url
-        browser = get_random_browser(mobile=is_shopee)
-        print(f"🔄 Tentativa {attempt + 1}/{max_retries} usando {browser}")
+        browser = get_random_browser()
+        print(f"Tentativa {attempt + 1}/{max_retries} usando {browser}")
+        
+        # Manually set mobile User-Agent for Shopee if needed
+        headers = common_headers.copy()
+        if is_shopee:
+            headers["User-Agent"] = "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            headers.update({
+                "Referer": "https://shopee.com.br/",
+                "X-Requested-With": "com.shopee.br",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+            })
+
         try:
-            async with AsyncSession(impersonate=browser, headers=common_headers) as s:
-                if is_shopee:
-                    s.headers.update({
-                        "Referer": "https://shopee.com.br/",
-                        "X-Requested-With": "com.shopee.br",
-                        "Sec-Fetch-Dest": "document",
-                        "Sec-Fetch-Mode": "navigate",
-                        "Sec-Fetch-Site": "cross-site",
-                    })
-                
+            async with AsyncSession(impersonate=browser, headers=headers) as s:
                 proxy_dict = PROXY_URL if PROXY_URL else None
                 response = await s.get(url, timeout=30, allow_redirects=True, proxy=proxy_dict)
                 metadata["status_code"] = response.status_code
                 
                 if response.status_code != 200:
-                    print(f"⚠️ Status {response.status_code} na tentativa {attempt + 1}")
+                    print(f"Status {response.status_code} na tentativa {attempt + 1}")
                     if attempt < max_retries - 1:
                         await asyncio.sleep(random.uniform(2.0, 5.0))
                         continue
@@ -159,7 +161,7 @@ async def fetch_product_metadata(url: str) -> dict:
                 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
-                # 1. Extração de Título
+                # 1. Extrao de Ttulo
                 title = ""
                 css_selectors = ["#productTitle", "meta[property='og:title']", "meta[name='twitter:title']", "h1", "title"]
                 for selector in css_selectors:
@@ -190,26 +192,26 @@ async def fetch_product_metadata(url: str) -> dict:
                 
                 # --- Fallback Shopee API ---
                 if is_invalid and "shopee.com.br" in url:
-                    print("⚠️ Scraper bloqueado pela Shopee. Tentando API oficial...")
+                    print("Scraper bloqueado pela Shopee. Tentando API oficial...")
                     try:
                         from affiliate import get_shopee_product_info
                         shopee_info = await get_shopee_product_info(url)
                         if shopee_info and shopee_info.get("title"):
                             metadata["title"] = shopee_info["title"]
                             metadata["image_url"] = shopee_info.get("image", "") or ""
-                            print(f"✅ Recuperado via API Shopee: {metadata['title'][:60]}")
+                            print(f"Recuperado via API Shopee: {metadata['title'][:60]}")
                             if metadata["image_url"]: 
                                 metadata["local_image_path"] = await download_image(metadata["image_url"])
                             return metadata
                         elif shopee_slug_title:
                             metadata["title"] = shopee_slug_title
-                            print(f"✅ Recuperado via Shopee Slug: {metadata['title'][:60]}")
+                            print(f"Recuperado via Shopee Slug: {metadata['title'][:60]}")
                             return metadata
                     except Exception as e:
-                        print(f"❌ Erro fallback Shopee: {e}")
+                        print(f"Erro fallback Shopee: {e}")
 
                 if is_invalid:
-                    print(f"🚫 Bloqueio detectado: '{title[:50]}'")
+                    print(f"Bloqueio detectado: '{title[:50]}'")
                     if attempt < max_retries - 1:
                         await asyncio.sleep(2)
                         continue
@@ -217,7 +219,7 @@ async def fetch_product_metadata(url: str) -> dict:
 
                 metadata["title"] = title
 
-                # 4. Extração de Imagem
+                # 4. Extrao de Imagem
                 if not metadata["image_url"] or "captcha" in str(metadata["image_url"]).lower():
                     img_selectors = [("meta", {"property": "og:image"}), ("img", {"id": "landingImage"}), ("img", {"class": "product-image"})]
                     for tag_name, attrs in img_selectors:
@@ -232,13 +234,13 @@ async def fetch_product_metadata(url: str) -> dict:
                     return metadata
                     
         except Exception as e:
-            print(f"❌ Erro na tentativa {attempt + 1}: {e}")
+            print(f"Erro na tentativa {attempt + 1}: {e}")
             if attempt < max_retries - 1: await asyncio.sleep(1)
     
     # Fallback Final: Shopee Slug
     if not metadata["title"] and shopee_slug_title:
         metadata["title"] = shopee_slug_title
-        print(f"[Shopee] Usando slug como último recurso: {shopee_slug_title}")
+        print(f"[Shopee] Usando slug como ltimo recurso: {shopee_slug_title}")
     
     return metadata
 

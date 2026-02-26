@@ -12,13 +12,13 @@ from datetime import datetime
 
 def clean_tracking_params(url: str) -> str:
     """
-    Remove parâmetros de rastreamento conhecidos para evitar conflitos e links sujos.
+    Remove parmetros de rastreamento conhecidos para evitar conflitos e links sujos.
     """
     try:
         parsed = urlparse(url)
         params = parse_qs(parsed.query)
         
-        # Lista de parâmetros para remover
+        # Lista de parmetros para remover
         params_to_remove = [
             'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
             'fbclid', 'gclid', 'smid', 'pf_rd_p', 'pf_rd_r', 'pd_rd_w', 'pd_rd_wg', 'pd_rd_r',
@@ -72,7 +72,7 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
                     target_product_url = raw_link.replace('\\u002F', '/').replace('\\/', '/')
                     print(f"[OK] Lista curada extraida da vitrine: {target_product_url}")
                 else:
-                    # 2. Se não for lista, tentar achar o produto em destaque usual
+                    # 2. Se no for lista, tentar achar o produto em destaque usual
                     # O produto destacado no topo tem a classe poly-component__link--action-link
                     featured_link = soup.select_one("a.poly-component__link--action-link")
                     if not featured_link:
@@ -81,7 +81,7 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
                         
                     if featured_link and featured_link.get("href"):
                         target_product_url = featured_link['href']
-                        print(f"✅ Produto extraído da vitrine: {target_product_url}")
+                        print(f"Produto extraido da vitrine: {target_product_url}")
                     else:
                         print(f"[ERR] Nao foi possivel encontrar o produto destacado ou lista na vitrine.")
         except Exception as e:
@@ -90,12 +90,12 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
     # Limpar a URL do produto antes de enviar para a API
     clean_url = clean_tracking_params(target_product_url)
 
-    # Se a API falhar, o fallback é passar a URL original inteira (ou limpa) no ref do nosso link social genérico
+    # Se a API falhar, o fallback  passar a URL original inteira (ou limpa) no ref do nosso link social genrico
     fallback_social_url = f"https://www.mercadolivre.com.br/social/drmkt?forceInApp=true&matt_word=drmk&ref={clean_url}"
 
     try:
         print(f"Convertendo ML via API Stripe: {clean_url}")
-        # A API Stripe exige um NOVO cliente httpx para não enviar _csrf cookies das requisições anteriores
+        # A API Stripe exige um NOVO cliente httpx para no enviar _csrf cookies das requisies anteriores
         async with httpx.AsyncClient(timeout=10.0) as api_client:
             api_headers = {
                 'Content-Type': 'application/json',
@@ -182,7 +182,7 @@ async def convert_aliexpress_to_affiliate(original_url: str) -> str:
         return url
 
     
-    # Parâmetros obrigatórios da API TopClient AliExpress
+    # Parmetros obrigatrios da API TopClient AliExpress
     params = {
         "method": "aliexpress.affiliate.link.generate",
         "app_key": ALI_APP_KEY,
@@ -196,7 +196,7 @@ async def convert_aliexpress_to_affiliate(original_url: str) -> str:
     }
     
     # Algoritmo de Assinatura (MD5) da plataforma
-    # 1. Ordenar parâmetros em ordem alfabética pela chave
+    # 1. Ordenar parmetros em ordem alfabtica pela chave
     sorted_keys = sorted(params.keys())
     # 2. String = SECRET_KEY + key1 + value1 + key2 + value2 ... + SECRET_KEY
     sign_str = ALI_APP_SECRET
@@ -204,7 +204,7 @@ async def convert_aliexpress_to_affiliate(original_url: str) -> str:
         sign_str += str(k) + str(params[k])
     sign_str += ALI_APP_SECRET
     
-    # 3. MD5 hash em Maiúsculo
+    # 3. MD5 hash em Maisculo
     sign = hashlib.md5(sign_str.encode("utf-8")).hexdigest().upper()
     params["sign"] = sign
 
@@ -247,12 +247,12 @@ async def convert_aliexpress_to_affiliate(original_url: str) -> str:
                     if short_url:
                         return short_url
                     else:
-                        print(f"⚠️ Erro ao converter item no AliExpress: {item_info.get('message', 'Desconhecido')}")
+                        print(f" Erro ao converter item no AliExpress: {item_info.get('message', 'Desconhecido')}")
                 else:
                     print("[!] Modulo promotion_links vazio na resposta.")
                         
             except Exception as parse_err:
-                print(f"⚠️ Erro ao analisar resposta do AliExpress: {parse_err}. Retorno bruto: {data}")
+                print(f" Erro ao analisar resposta do AliExpress: {parse_err}. Retorno bruto: {data}")
                 return get_fallback_url(clean_url)
 
     except Exception as e:
@@ -261,7 +261,7 @@ async def convert_aliexpress_to_affiliate(original_url: str) -> str:
     return get_fallback_url(clean_url)
 
 async def shorten_url_tiny(long_url: str) -> str:
-    """Encurtador de URL via TinyURL público."""
+    """Encurtador de URL via TinyURL pblico."""
     import urllib.parse
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -372,9 +372,9 @@ async def convert_shopee_fallback_manual(original_url: str) -> str:
 
 async def get_shopee_product_info(url: str):
     """
-    Busca informações detalhadas do produto Shopee com múltiplas estratégias:
-    1. Extrai título do slug da URL (instantâneo, sem API)
-    2. API REST pública da Shopee /api/v4/item/get (sem autenticação)
+    Busca informaes detalhadas do produto Shopee com mltiplas estratgias:
+    1. Extrai ttulo do slug da URL (instantneo, sem API)
+    2. API REST pblica da Shopee /api/v4/item/get (sem autenticao)
     3. API Affiliate GraphQL (requer credenciais)
     """
     import json, time, hashlib
@@ -406,22 +406,22 @@ async def get_shopee_product_info(url: str):
 
     print(f"[Shopee] shop_id={shop_id} item_id={item_id}")
 
-    # === ESTRATÉGIA 1: Título via slug da URL ===
+    # === ESTRATGIA 1: Ttulo via slug da URL ===
     slug_title = None
     try:
-        # Padrões possíveis:
+        # Padres possveis:
         # A. shopee.com.br/Nome-do-Produto-i.123.456
         # B. shopee.com.br/product/123/456
         # C. shopee.com.br/nome-do-vendedor-ou-produto/123/456
         path_segments = working_url.split('?')[0].rstrip('/').split('/')
         last_part = path_segments[-1]
         
-        # Tenta remover o sufixo -i... (Padrão A)
+        # Tenta remover o sufixo -i... (Padro A)
         slug = re.sub(r'-i\.\d+\.\d+$', '', last_part)
         
-        # Se o resultado for numérico (Padrão B ou C), o slug está antes dos IDs
+        # Se o resultado for numrico (Padro B ou C), o slug est antes dos IDs
         if slug.isdigit() and len(path_segments) >= 4:
-            # Em /slug/shop/item, o slug está 2 posições atrás do item_id
+            # Em /slug/shop/item, o slug est 2 posies atrs do item_id
             # path_segments: ["https:", "", "shopee.com.br", "SLUG", "SHOP", "ITEM"]
             candidate = path_segments[-3]
             if candidate != "product":
@@ -430,13 +430,13 @@ async def get_shopee_product_info(url: str):
         if slug and not slug.isdigit():
             slug_title = slug.replace('-', ' ').strip()
             if len(slug_title) > 3:
-                print(f"[Shopee Slug] Título extraído: {slug_title[:80]}")
+                print(f"[Shopee Slug] Ttulo extrado: {slug_title[:80]}")
             else:
                 slug_title = None
     except Exception:
         slug_title = None
 
-    # === ESTRATÉGIA 2: API REST pública da Shopee (sem auth) ===
+    # === ESTRATGIA 2: API REST pblica da Shopee (sem auth) ===
     rest_result = None
     if item_id and shop_id:
         try:
@@ -448,7 +448,7 @@ async def get_shopee_product_info(url: str):
                 'x-shopee-language': 'pt-BR',
                 'x-requested-with': 'XMLHttpRequest'
             }
-            # Endpoint pdp/get_pc é o que o desktop usa para carregar nome e imagem
+            # Endpoint pdp/get_pc  o que o desktop usa para carregar nome e imagem
             rest_url = f"https://shopee.com.br/api/v4/pdp/get_pc?item_id={item_id}&shop_id={shop_id}"
             async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
                 resp = await client.get(rest_url, headers=headers_rest)
@@ -472,9 +472,9 @@ async def get_shopee_product_info(url: str):
     if rest_result:
         return rest_result
 
-    # === ESTRATÉGIA 3: API Affiliate GraphQL (schema correto) ===
+    # === ESTRATGIA 3: API Affiliate GraphQL (schema correto) ===
     # Nota: productOfferV2 retorna ofertas do afiliado. Para buscar por item,
-    # a query correta é productDetailByItemId (se disponível) ou via productOffer
+    # a query correta  productDetailByItemId (se disponvel) ou via productOffer
     try:
         import config
         from database import get_config as _gc
@@ -519,12 +519,12 @@ async def get_shopee_product_info(url: str):
     except Exception as e:
         print(f"[Shopee GQL] Erro: {e}")
 
-    # === FALLBACK FINAL 1: Usar título do slug se disponível ===
+    # === FALLBACK FINAL 1: Usar ttulo do slug se disponvel ===
     if slug_title:
-        print(f"[Shopee] Usando título do slug como fallback: {slug_title[:60]}")
+        print(f"[Shopee] Usando ttulo do slug como fallback: {slug_title[:60]}")
         return {"title": slug_title, "image": None}
 
-    # === FALLBACK FINAL 2: Google Search Snippet (Último recurso) ===
+    # === FALLBACK FINAL 2: Google Search Snippet (ltimo recurso) ===
     if item_id and shop_id:
         google_res = await google_shopee_fallback(shop_id, item_id)
         if google_res:
@@ -548,10 +548,10 @@ async def google_shopee_fallback(shop_id, item_id):
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url, headers=headers)
             if resp.status_code == 200:
-                # Extrair título da página do snippet
-                # Padrão típico do Google: <h3 class="...">Título do Produto | Shopee Brasil</h3>
-                # Ou no título da própria página de busca: que não ajuda muito se for a SERP.
-                # Vamos buscar no corpo da resposta o título que contém "Shopee Brasil" e o ID
+                # Extrair ttulo da pgina do snippet
+                # Padro tpico do Google: <h3 class="...">Ttulo do Produto | Shopee Brasil</h3>
+                # Ou no ttulo da prpria pgina de busca: que no ajuda muito se for a SERP.
+                # Vamos buscar no corpo da resposta o ttulo que contm "Shopee Brasil" e o ID
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 h3s = soup.find_all('h3')
                 for h3 in h3s:
@@ -578,7 +578,7 @@ async def google_shopee_fallback(shop_id, item_id):
 
 async def convert_to_affiliate(url: str) -> str:
     """
-    Identifica a loja e aplica a lógica de conversão correspondente.
+    Identifica a loja e aplica a lgica de converso correspondente.
     """
     try:
         parsed = urlparse(url)
@@ -598,18 +598,18 @@ async def convert_to_affiliate(url: str) -> str:
         from database import get_config
         AMAZON_TAG = get_config("AMAZON_TAG") or getattr(config, 'AMAZON_TAG', '')
         
-        # Tenta extrair o ASIN (10 caracteres alfanuméricos)
-        # Padrões comuns: /dp/ASIN, /gp/product/ASIN, /exec/obidos/ASIN
+        # Tenta extrair o ASIN (10 caracteres alfanumricos)
+        # Padres comuns: /dp/ASIN, /gp/product/ASIN, /exec/obidos/ASIN
         asin_match = re.search(r'/(?:dp|gp/product|exec/obidos|aw/d)/([A-Z0-9]{10})', url, re.IGNORECASE)
         asin = asin_match.group(1).upper() if asin_match else None
         
         if asin:
-            # Reconstrói a URL no formato mais curto possível
+            # Reconstri a URL no formato mais curto possvel
             new_url = f"https://{parsed.netloc}/dp/{asin}?tag={AMAZON_TAG}" if AMAZON_TAG else f"https://{parsed.netloc}/dp/{asin}"
             print(f"[OK] Link Amazon encurtado via ASIN ({asin}): {new_url}")
             return new_url
 
-        # Fallback caso não ache ASIN (mantém limpeza de parâmetros)
+        # Fallback caso no ache ASIN (mantm limpeza de parmetros)
         params = parse_qs(parsed.query)
         if 'tag' in params: del params['tag']
         params_to_remove = ['linkCode', 'hvadid', 'hvpos', 'hvnetw', 'hvrand', 'hvpone', 'hvptwo', 'hvqmt', 'hvdev', 'hvdvcmdl', 'hvlocint', 'hvlocphy', 'hvtargid', 'psc', 'language', 'gad_source', 'mcid', 'ref']
