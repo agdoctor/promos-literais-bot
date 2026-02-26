@@ -429,10 +429,13 @@ async def get_shopee_product_info(url: str):
                 slug = candidate
         
         if slug and not slug.isdigit():
-            slug_title = slug.replace('-', ' ').strip()
-            if len(slug_title) > 3:
+            candidate = slug.replace('-', ' ').strip()
+            # Critrio de confiana: ter pelo menos 2 espaos (3 palavras) ou ser longo (>15 chars)
+            if len(candidate) > 3 and (candidate.count(' ') >= 2 or len(candidate) > 15):
+                slug_title = candidate
                 print(f"[Shopee Slug] Ttulo extrado: {slug_title[:80]}")
             else:
+                print(f"[Shopee Slug] Descartado (pouco descritivo): {candidate}")
                 slug_title = None
     except Exception:
         slug_title = None
@@ -581,10 +584,13 @@ async def get_shopee_product_info(url: str):
     except Exception as e:
         print(f"[Shopee GQL] Erro: {e}")
 
-    # === FALLBACK FINAL 1: Usar ttulo do slug se disponvel ===
-    if slug_title:
+    # === FALLBACK FINAL 1: Usar ttulo do slug se disponvel e confivel ===
+    # Critrio de confiana: ter pelo menos 2 espaos (3 palavras) ou ser longo (>15 chars)
+    if slug_title and (slug_title.count(' ') >= 2 or len(slug_title) > 15):
         print(f"[Shopee] Usando ttulo do slug como fallback: {slug_title[:60]}")
         return {"title": slug_title, "image": None}
+    elif slug_title:
+        print(f"[Shopee] Slug descartado por ser pouco descritivo: {slug_title}")
 
     # === FALLBACK FINAL 2: Google Search Snippet (ltimo recurso) ===
     if item_id and shop_id:
