@@ -484,10 +484,10 @@ async def get_shopee_product_info(url: str):
         app_secret = _gc("SHOPEE_APP_SECRET") or getattr(config, 'SHOPEE_APP_SECRET', None)
 
         if app_id and app_secret and item_id:
-            # Query simplificada para evitar erros de schema desconhecido
+            # Estratégia 1: Pesquisa direta pela URL (Mais confiável no GQL)
             query = """
             query {
-              productOfferV2(keyword: \"""" + str(item_id) + """\") {
+              productOfferV2(keyword: \"""" + working_url + """\") {
                 nodes {
                   imageUrl
                   itemId
@@ -504,22 +504,50 @@ async def get_shopee_product_info(url: str):
                 "Content-Type": "application/json",
                 "Authorization": f"SHA256 Credential={app_id}, Signature={signature}, Timestamp={timestamp}"
             }
+
             async with httpx.AsyncClient(timeout=15.0, proxy=PROXY_URL) as client:
                 resp = await client.post("https://open-api.affiliate.shopee.com.br/graphql",
                                          headers=gql_headers, content=body)
-                print(f"[Shopee GQL] Status: {resp.status_code} | {resp.text[:300]}")
                 if resp.status_code == 200:
                     data = resp.json()
                     gql_data = data.get("data", {}).get("productOfferV2", {})
-                    if gql_data and "nodes" in gql_data:
+                    if gql_data and gql_data.get("nodes"):
+                        node = gql_data["nodes"][0]
+                        print(f"[Shopee GQL URL] Sucesso: {node['productName'][:50]}")
+                        return {"title": node.get("productName"), "image": node.get("imageUrl")}
+
+            # Estratégia 2: Pesquisa pelo Item ID
+            query = """
+            query {
+              productOfferV2(keyword: \"""" + str(item_id) + """\") {
+                nodes {
+                  imageUrl
+                  itemId
+                  productName
+                }
+              }
+            }
+            """
+            body = json.dumps({"query": query}, separators=(',', ':'))
+            base_str = f"{app_id}{timestamp}{body}{app_secret}"
+            signature = hashlib.sha256(base_str.encode('utf-8')).hexdigest()
+            gql_headers["Authorization"] = f"SHA256 Credential={app_id}, Signature={signature}, Timestamp={timestamp}"
+            
+            async with httpx.AsyncClient(timeout=15.0, proxy=PROXY_URL) as client:
+                resp = await client.post("https://open-api.affiliate.shopee.com.br/graphql",
+                                         headers=gql_headers, content=body)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    gql_data = data.get("data", {}).get("productOfferV2", {})
+                    if gql_data and gql_data.get("nodes"):
                         nodes = gql_data.get("nodes", [])
                         node = next((n for n in nodes if str(n.get('itemId')) == str(item_id)), None)
                         if not node and nodes: node = nodes[0]
                         if node and node.get("productName"):
-                            print(f"[Shopee GQL] Sucesso: {node['productName'][:50]}")
+                            print(f"[Shopee GQL ID] Sucesso: {node['productName'][:50]}")
                             return {"title": node.get("productName"), "image": node.get("imageUrl")}
-            # Fallback: se nodes veio vazio, tenta pesquisar pelo slug_title
-            if not gql_data.get("nodes") and slug_title:
+            # Fallback: se nodes veio vazio, tenta pesquisar pelo slug_title (SE for confivel)
+            if not gql_data.get("nodes") and slug_title and (slug_title.count(' ') >= 2 or len(slug_title) > 15):
                 print(f"[Shopee GQL] Tentando fallback por titulo: {slug_title}")
                 query = """
                 query {

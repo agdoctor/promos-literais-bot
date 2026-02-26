@@ -114,11 +114,14 @@ async def fetch_product_metadata(url: str) -> dict:
                 if candidate != "product":
                     slug = candidate
 
-            if slug and not slug.isdigit():
-                candidate = slug.replace('-', ' ').strip()
-                if len(candidate) > 3:
-                    shopee_slug_title = candidate
-                    print(f"[Shopee Slug] Pr-extrado: {shopee_slug_title[:60]}")
+                # Critério de confiança: ter pelo menos 2 espaços (3 palavras) ou ser longo
+                if slug and not slug.isdigit():
+                    candidate = slug.replace('-', ' ').strip()
+                    if len(candidate) > 3 and (candidate.count(' ') >= 2 or len(candidate) > 15):
+                        shopee_slug_title = candidate
+                        print(f"[Shopee Slug] Pr-extrado: {shopee_slug_title[:60]}")
+                    else:
+                        print(f"[Shopee Slug] Descartado (pouco descritivo): {candidate}")
         except Exception:
             pass
 
