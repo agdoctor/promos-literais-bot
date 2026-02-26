@@ -52,8 +52,10 @@ async def expand_url(url: str) -> str:
             print(f"[Expand] Falha ao expandir {url}: {e}")
     return url
 
-def get_random_browser() -> str:
+def get_random_browser(mobile=False) -> str:
     """Retorna um perfil de navegador aleatório suportado pelo curl_cffi."""
+    if mobile:
+        return random.choice(["android110", "chrome_android120"])
     return random.choice(["chrome110", "chrome116", "chrome120", "chrome124", "safari15_5"])
 
 async def download_image(url: str, session: Optional[AsyncSession] = None) -> Optional[str]:
@@ -98,17 +100,25 @@ async def fetch_product_metadata(url: str) -> dict:
     shopee_slug_title = None
     if "shopee.com.br" in url:
         try:
-            # Padrão: shopee.com.br/Nome-do-Produto-i.123.456
-            path_parts = url.split('?')[0].rstrip('/').split('/')
-            last_part = path_parts[-1]
+            # Padrões possíveis:
+            # A. shopee.com.br/Nome-do-Produto-i.123.456
+            # B. shopee.com.br/product/123/456
+            # C. shopee.com.br/slug/123/456
+            path_segments = url.split('?')[0].rstrip('/').split('/')
+            last_part = path_segments[-1]
             
             # Remove o sufixo -i.SHOP_ID.ITEM_ID se existir
             slug = re.sub(r'-i\.\d+\.\d+$', '', last_part)
             
-            # Se o resultado for apenas números (como em /product/123/456), não é um título válido
-            if not slug.isdigit():
+            # Se for número, olha 2 posições antes
+            if slug.isdigit() and len(path_segments) >= 4:
+                candidate = path_segments[-3]
+                if candidate != "product":
+                    slug = candidate
+
+            if slug and not slug.isdigit():
                 candidate = slug.replace('-', ' ').strip()
-                if len(candidate) > 5:
+                if len(candidate) > 3:
                     shopee_slug_title = candidate
                     print(f"[Shopee Slug] Pré-extraído: {shopee_slug_title[:60]}")
         except Exception:
@@ -122,11 +132,19 @@ async def fetch_product_metadata(url: str) -> dict:
     }
 
     for attempt in range(max_retries):
-        browser = get_random_browser()
+        is_shopee = "shopee.com.br" in url
+        browser = get_random_browser(mobile=is_shopee)
         print(f"🔄 Tentativa {attempt + 1}/{max_retries} usando {browser}")
         try:
             async with AsyncSession(impersonate=browser, headers=common_headers) as s:
-                if "shopee.com.br" in url: s.headers.update({"Referer": "https://shopee.com.br/"})
+                if is_shopee:
+                    s.headers.update({
+                        "Referer": "https://shopee.com.br/",
+                        "X-Requested-With": "com.shopee.br",
+                        "Sec-Fetch-Dest": "document",
+                        "Sec-Fetch-Mode": "navigate",
+                        "Sec-Fetch-Site": "cross-site",
+                    })
                 
                 proxy_dict = PROXY_URL if PROXY_URL else None
                 response = await s.get(url, timeout=30, allow_redirects=True, proxy=proxy_dict)
@@ -135,7 +153,7 @@ async def fetch_product_metadata(url: str) -> dict:
                 if response.status_code != 200:
                     print(f"⚠️ Status {response.status_code} na tentativa {attempt + 1}")
                     if attempt < max_retries - 1:
-                        await asyncio.sleep(random.uniform(1.0, 3.0))
+                        await asyncio.sleep(random.uniform(2.0, 5.0))
                         continue
                     else: break
                 

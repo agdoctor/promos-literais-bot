@@ -409,13 +409,27 @@ async def get_shopee_product_info(url: str):
     # === ESTRATÉGIA 1: Título via slug da URL ===
     slug_title = None
     try:
-        path = working_url.split('?')[0].rstrip('/').split('/')[-1]
-        slug = re.sub(r'-i\.\d+\.\d+$', '', path)
+        # Padrões possíveis:
+        # A. shopee.com.br/Nome-do-Produto-i.123.456
+        # B. shopee.com.br/product/123/456
+        # C. shopee.com.br/nome-do-vendedor-ou-produto/123/456
+        path_segments = working_url.split('?')[0].rstrip('/').split('/')
+        last_part = path_segments[-1]
         
-        # Ignora se o slug for puramente numérico (como em /product/123/456)
-        if not slug.isdigit():
+        # Tenta remover o sufixo -i... (Padrão A)
+        slug = re.sub(r'-i\.\d+\.\d+$', '', last_part)
+        
+        # Se o resultado for numérico (Padrão B ou C), o slug está antes dos IDs
+        if slug.isdigit() and len(path_segments) >= 4:
+            # Em /slug/shop/item, o slug está 2 posições atrás do item_id
+            # path_segments: ["https:", "", "shopee.com.br", "SLUG", "SHOP", "ITEM"]
+            candidate = path_segments[-3]
+            if candidate != "product":
+                slug = candidate
+        
+        if slug and not slug.isdigit():
             slug_title = slug.replace('-', ' ').strip()
-            if len(slug_title) > 5:
+            if len(slug_title) > 3:
                 print(f"[Shopee Slug] Título extraído: {slug_title[:80]}")
             else:
                 slug_title = None
@@ -428,29 +442,30 @@ async def get_shopee_product_info(url: str):
         try:
             headers_rest = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://shopee.com.br/',
+                'Referer': f'https://shopee.com.br/product/{shop_id}/{item_id}',
                 'Accept': 'application/json',
                 'x-api-source': 'pc',
-                'x-shopee-language': 'pt',
-                'af-ac-enc-dat': '',
+                'x-shopee-language': 'pt-BR',
+                'x-requested-with': 'XMLHttpRequest'
             }
-            rest_url = f"https://shopee.com.br/api/v4/item/get?itemid={item_id}&shopid={shop_id}"
+            # Endpoint pdp/get_pc é o que o desktop usa para carregar nome e imagem
+            rest_url = f"https://shopee.com.br/api/v4/pdp/get_pc?item_id={item_id}&shop_id={shop_id}"
             async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
                 resp = await client.get(rest_url, headers=headers_rest)
-                print(f"[Shopee REST] Status: {resp.status_code}")
+                print(f"[Shopee PDP API] Status: {resp.status_code}")
                 if resp.status_code == 200:
                     data = resp.json()
-                    item_data = data.get('data') or data.get('item') or {}
+                    item_data = data.get('data', {}).get('item', {}) or data.get('data', {}) or data.get('item', {})
                     name = item_data.get('name') or item_data.get('title') or item_data.get('item_name')
-                    images = item_data.get('images') or item_data.get('image', [])
-                    if isinstance(images, list) and images:
-                        img_id = images[0]
-                        image_url = f"https://cf.shopee.com.br/file/{img_id}_tn" if img_id else None
-                    else:
-                        image_url = None
+                    image = item_data.get('image') or item_data.get('images', [None])[0]
                     if name:
-                        rest_result = {"title": name, "image": image_url}
-                        print(f"[Shopee REST] ✅ {name[:60]}")
+                        result = {
+                            "title": name,
+                            "image": f"https://down-br.img.susercontent.com/file/{image}" if image else None,
+                            "price": str(item_data.get('price', 0) / 100000) if item_data.get('price') else "0"
+                        }
+                        print(f"[Shopee PDP] Sucesso: {result['title'][:50]}")
+                        return result
         except Exception as e:
             print(f"[Shopee REST] Erro: {e}")
 
@@ -467,14 +482,14 @@ async def get_shopee_product_info(url: str):
         app_secret = _gc("SHOPEE_APP_SECRET") or getattr(config, 'SHOPEE_APP_SECRET', None)
 
         if app_id and app_secret and item_id:
-            # Query correta para o schema da Shopee BR Affiliate
+            # Query simplificada para evitar erros de schema desconhecido
             query = """
             query {
-              productOfferV2(itemIds: [""" + str(item_id) + """]) {
+              productOfferV2(keyword: \"""" + str(item_id) + """\") {
                 nodes {
                   imageUrl
                   itemId
-                  itemName
+                  productName
                 }
               }
             }
@@ -493,19 +508,71 @@ async def get_shopee_product_info(url: str):
                 print(f"[Shopee GQL] Status: {resp.status_code} | {resp.text[:300]}")
                 if resp.status_code == 200:
                     data = resp.json()
-                    nodes = data.get("data", {}).get("productOfferV2", {}).get("nodes", [])
-                    # Filtrar pelo item_id exato
-                    node = next((n for n in nodes if str(n.get('itemId')) == str(item_id)), nodes[0] if nodes else None)
-                    if node:
-                        return {"title": node.get("itemName"), "image": node.get("imageUrl")}
+                    gql_data = data.get("data", {}).get("productOfferV2", {})
+                    if gql_data and "nodes" in gql_data:
+                        nodes = gql_data.get("nodes", [])
+                        node = next((n for n in nodes if str(n.get('itemId')) == str(item_id)), None)
+                        if not node and nodes: node = nodes[0]
+                        if node and node.get("productName"):
+                            print(f"[Shopee GQL] Sucesso: {node['productName'][:50]}")
+                            return {"title": node.get("productName"), "image": node.get("imageUrl")}
     except Exception as e:
         print(f"[Shopee GQL] Erro: {e}")
 
-    # === FALLBACK FINAL: Usar título do slug se disponível ===
+    # === FALLBACK FINAL 1: Usar título do slug se disponível ===
     if slug_title:
         print(f"[Shopee] Usando título do slug como fallback: {slug_title[:60]}")
         return {"title": slug_title, "image": None}
 
+    # === FALLBACK FINAL 2: Google Search Snippet (Último recurso) ===
+    if item_id and shop_id:
+        google_res = await google_shopee_fallback(shop_id, item_id)
+        if google_res:
+            return google_res
+
+    return None
+
+async def google_shopee_fallback(shop_id, item_id):
+    """
+    Busca o nome do produto via Google Search snippets para links bloqueados.
+    """
+    search_query = f"site:shopee.com.br product/{shop_id}/{item_id}"
+    url = f"https://www.google.com/search?q={search_query}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    }
+    try:
+        print(f"[Shopee Google Fallback] Buscando snippet para {item_id}...")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                # Extrair título da página do snippet
+                # Padrão típico do Google: <h3 class="...">Título do Produto | Shopee Brasil</h3>
+                # Ou no título da própria página de busca: que não ajuda muito se for a SERP.
+                # Vamos buscar no corpo da resposta o título que contém "Shopee Brasil" e o ID
+                soup = BeautifulSoup(resp.text, 'html.parser')
+                h3s = soup.find_all('h3')
+                for h3 in h3s:
+                    title_text = h3.get_text()
+                    low_title = title_text.lower()
+                    if "shopee" in low_title:
+                        # Extrair o nome do produto antes do "Shopee"
+                        clean_title = re.split(r'\s*[|\-]\s*Shopee', title_text, flags=re.IGNORECASE)[0].strip()
+                        if len(clean_title) > 10 and not clean_title.isdigit():
+                            print(f"[Shopee Google] Sucesso: {clean_title}")
+                            return {"title": clean_title, "image": None}
+                
+                # Fallback no texto bruto
+                match = re.search(r'<title>([^<]+Shopee[^<]+)</title>', resp.text, re.IGNORECASE)
+                if match:
+                    title_text = match.group(1)
+                    clean_title = re.split(r'\s*[|\-]\s*Shopee', title_text, flags=re.IGNORECASE)[0].strip()
+                    if len(clean_title) > 10:
+                        return {"title": clean_title, "image": None}
+    except Exception as e:
+        print(f"[Shopee Google Fallback] Erro: {e}")
     return None
 
 
