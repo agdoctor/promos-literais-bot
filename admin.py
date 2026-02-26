@@ -832,7 +832,7 @@ async def start_admin_bot():
             full_url = f"{base_url}/?token={console_token}"
             await bot.set_chat_menu_button(
                 menu_button=MenuButtonWebApp(
-                    text="🖥️ Admin / Painel",
+                    text="🖥️ Admin",
                     web_app=WebAppInfo(url=full_url)
                 )
             )
