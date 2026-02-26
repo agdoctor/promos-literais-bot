@@ -26,7 +26,7 @@ SHOPEE_APP_ID = os.getenv("SHOPEE_APP_ID")
 SHOPEE_APP_SECRET = os.getenv("SHOPEE_APP_SECRET")
 
 # Proxy Configuration (Opcional - Recomendado para evitar 403)
-PROXY_URL = os.getenv("PROXY_URL")
+PROXY_URL = os.getenv("PROXY_URL") or "http://yvqwihmq-1:wvd70499o3a5@p.webshare.io:80/"
 
 # WhatsApp (Green-API - Lightweight)
 WHATSAPP_ENABLED = os.getenv("WHATSAPP_ENABLED", "false").lower() == "true"

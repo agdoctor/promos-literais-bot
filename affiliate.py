@@ -451,8 +451,8 @@ async def get_shopee_product_info(url: str):
             }
             # Endpoint pdp/get_pc o que o desktop usa para carregar nome e imagem
             rest_url = f"https://shopee.com.br/api/v4/pdp/get_pc?item_id={item_id}&shop_id={shop_id}"
-            proxy_dict = {"http://": PROXY_URL, "https://": PROXY_URL} if PROXY_URL else None
-            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True, proxy=proxy_dict) as client:
+            # Correct proxy usage for httpx (string, not dict)
+            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True, proxy=PROXY_URL) as client:
                 resp = await client.get(rest_url, headers=headers_rest)
                 print(f"[Shopee PDP API] Status: {resp.status_code}")
                 if resp.status_code == 200:
@@ -504,8 +504,7 @@ async def get_shopee_product_info(url: str):
                 "Content-Type": "application/json",
                 "Authorization": f"SHA256 Credential={app_id}, Signature={signature}, Timestamp={timestamp}"
             }
-            proxy_dict = {"http://": PROXY_URL, "https://": PROXY_URL} if PROXY_URL else None
-            async with httpx.AsyncClient(timeout=15.0, proxy=proxy_dict) as client:
+            async with httpx.AsyncClient(timeout=15.0, proxy=PROXY_URL) as client:
                 resp = await client.post("https://open-api.affiliate.shopee.com.br/graphql",
                                          headers=gql_headers, content=body)
                 print(f"[Shopee GQL] Status: {resp.status_code} | {resp.text[:300]}")
@@ -519,6 +518,38 @@ async def get_shopee_product_info(url: str):
                         if node and node.get("productName"):
                             print(f"[Shopee GQL] Sucesso: {node['productName'][:50]}")
                             return {"title": node.get("productName"), "image": node.get("imageUrl")}
+            # Fallback: se nodes veio vazio, tenta pesquisar pelo slug_title
+            if not gql_data.get("nodes") and slug_title:
+                print(f"[Shopee GQL] Tentando fallback por titulo: {slug_title}")
+                query = """
+                query {
+                  productOfferV2(keyword: \"""" + slug_title + """\") {
+                    nodes {
+                      imageUrl
+                      itemId
+                      productName
+                    }
+                  }
+                }
+                """
+                body = json.dumps({"query": query}, separators=(',', ':'))
+                # Re-sign and post (simplified for brevity here)
+                base_str = f"{app_id}{timestamp}{body}{app_secret}"
+                signature = hashlib.sha256(base_str.encode('utf-8')).hexdigest()
+                gql_headers["Authorization"] = f"SHA256 Credential={app_id}, Signature={signature}, Timestamp={timestamp}"
+                
+                async with httpx.AsyncClient(timeout=15.0, proxy=PROXY_URL) as client:
+                    resp = await client.post("https://open-api.affiliate.shopee.com.br/graphql",
+                                             headers=gql_headers, content=body)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        gql_data = data.get("data", {}).get("productOfferV2", {})
+                        if gql_data and gql_data.get("nodes"):
+                            nodes = gql_data.get("nodes", [])
+                            node = nodes[0]
+                            print(f"[Shopee GQL Fallback] Sucesso via Título: {node['productName'][:50]}")
+                            return {"title": node.get("productName"), "image": node.get("imageUrl")}
+
     except Exception as e:
         print(f"[Shopee GQL] Erro: {e}")
 
@@ -549,13 +580,11 @@ async def google_shopee_fallback(shop_id, item_id):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     }
-    proxy_dict = {"http://": PROXY_URL, "https://": PROXY_URL} if PROXY_URL else None
-
     for q in queries:
         try:
             print(f"[Shopee Google Fallback] Tentando query: {q}")
             url = f"https://www.google.com/search?q={q}"
-            async with httpx.AsyncClient(timeout=10.0, proxy=proxy_dict, headers=headers) as client:
+            async with httpx.AsyncClient(timeout=10.0, proxy=PROXY_URL, headers=headers) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     soup = BeautifulSoup(resp.text, 'html.parser')
