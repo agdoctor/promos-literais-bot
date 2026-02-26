@@ -9,6 +9,7 @@ import hmac
 import time
 import json
 from datetime import datetime
+from config import PROXY_URL
 
 def clean_tracking_params(url: str) -> str:
     """
@@ -448,9 +449,10 @@ async def get_shopee_product_info(url: str):
                 'x-shopee-language': 'pt-BR',
                 'x-requested-with': 'XMLHttpRequest'
             }
-            # Endpoint pdp/get_pc  o que o desktop usa para carregar nome e imagem
+            # Endpoint pdp/get_pc o que o desktop usa para carregar nome e imagem
             rest_url = f"https://shopee.com.br/api/v4/pdp/get_pc?item_id={item_id}&shop_id={shop_id}"
-            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+            proxy_dict = {"http://": PROXY_URL, "https://": PROXY_URL} if PROXY_URL else None
+            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True, proxy=proxy_dict) as client:
                 resp = await client.get(rest_url, headers=headers_rest)
                 print(f"[Shopee PDP API] Status: {resp.status_code}")
                 if resp.status_code == 200:
@@ -502,7 +504,8 @@ async def get_shopee_product_info(url: str):
                 "Content-Type": "application/json",
                 "Authorization": f"SHA256 Credential={app_id}, Signature={signature}, Timestamp={timestamp}"
             }
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            proxy_dict = {"http://": PROXY_URL, "https://": PROXY_URL} if PROXY_URL else None
+            async with httpx.AsyncClient(timeout=15.0, proxy=proxy_dict) as client:
                 resp = await client.post("https://open-api.affiliate.shopee.com.br/graphql",
                                          headers=gql_headers, content=body)
                 print(f"[Shopee GQL] Status: {resp.status_code} | {resp.text[:300]}")
@@ -535,44 +538,46 @@ async def get_shopee_product_info(url: str):
 async def google_shopee_fallback(shop_id, item_id):
     """
     Busca o nome do produto via Google Search snippets para links bloqueados.
+    Tenta multiplas queries para maximizar chance de acerto.
     """
-    search_query = f"site:shopee.com.br product/{shop_id}/{item_id}"
-    url = f"https://www.google.com/search?q={search_query}"
+    queries = [
+        f"shopee.com.br i.{shop_id}.{item_id}",
+        f"site:shopee.com.br product/{shop_id}/{item_id}",
+        f"shopee {item_id}"
+    ]
+    
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     }
-    try:
-        print(f"[Shopee Google Fallback] Buscando snippet para {item_id}...")
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(url, headers=headers)
-            if resp.status_code == 200:
-                # Extrair ttulo da pgina do snippet
-                # Padro tpico do Google: <h3 class="...">Ttulo do Produto | Shopee Brasil</h3>
-                # Ou no ttulo da prpria pgina de busca: que no ajuda muito se for a SERP.
-                # Vamos buscar no corpo da resposta o ttulo que contm "Shopee Brasil" e o ID
-                soup = BeautifulSoup(resp.text, 'html.parser')
-                h3s = soup.find_all('h3')
-                for h3 in h3s:
-                    title_text = h3.get_text()
-                    low_title = title_text.lower()
-                    if "shopee" in low_title:
-                        # Extrair o nome do produto antes do "Shopee"
-                        clean_title = re.split(r'\s*[|\-]\s*Shopee', title_text, flags=re.IGNORECASE)[0].strip()
-                        if len(clean_title) > 10 and not clean_title.isdigit():
-                            print(f"[Shopee Google] Sucesso: {clean_title}")
-                            return {"title": clean_title, "image": None}
-                
-                # Fallback no texto bruto
-                match = re.search(r'<title>([^<]+Shopee[^<]+)</title>', resp.text, re.IGNORECASE)
-                if match:
-                    title_text = match.group(1)
-                    clean_title = re.split(r'\s*[|\-]\s*Shopee', title_text, flags=re.IGNORECASE)[0].strip()
-                    if len(clean_title) > 10:
-                        return {"title": clean_title, "image": None}
-    except Exception as e:
-        print(f"[Shopee Google Fallback] Erro: {e}")
+    proxy_dict = {"http://": PROXY_URL, "https://": PROXY_URL} if PROXY_URL else None
+
+    for q in queries:
+        try:
+            print(f"[Shopee Google Fallback] Tentando query: {q}")
+            url = f"https://www.google.com/search?q={q}"
+            async with httpx.AsyncClient(timeout=10.0, proxy=proxy_dict, headers=headers) as client:
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    soup = BeautifulSoup(resp.text, 'html.parser')
+                    # Tenta h3 (titulos de resultados)
+                    for h3 in soup.find_all('h3'):
+                        text = h3.get_text().strip()
+                        if "Shopee" in text:
+                            clean = re.split(r'\s*[|\-]\s*Shopee', text, flags=re.IGNORECASE)[0].strip()
+                            if len(clean) > 8: 
+                                print(f"[Shopee Google] Sucesso: {clean}")
+                                return {"title": clean, "image": None}
+                    
+                    # Fallback no titulo da pagina
+                    page_title = soup.title.string if soup.title else ""
+                    if "Shopee" in page_title and len(page_title) > 20:
+                        clean = re.split(r'\s*[|\-]\s*Shopee', page_title, flags=re.IGNORECASE)[0].strip()
+                        if len(clean) > 8: return {"title": clean, "image": None}
+            
+            await asyncio.sleep(1) # Pequena pausa entre queries
+        except Exception as e:
+            print(f"[Shopee Google] Erro na query '{q}': {e}")
+            
     return None
 
 
