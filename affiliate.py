@@ -427,10 +427,11 @@ async def get_shopee_product_info(url: str):
     if item_id and shop_id:
         try:
             headers_rest = {
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Referer': 'https://shopee.com.br/',
                 'Accept': 'application/json',
                 'x-api-source': 'pc',
+                'x-shopee-language': 'pt',
                 'af-ac-enc-dat': '',
             }
             rest_url = f"https://shopee.com.br/api/v4/item/get?itemid={item_id}&shopid={shop_id}"
@@ -469,13 +470,11 @@ async def get_shopee_product_info(url: str):
             # Query correta para o schema da Shopee BR Affiliate
             query = """
             query {
-              productOfferV2(page: {limit: 1, offset: 0}, keyword: \"""" + str(item_id) + """\") {
+              productOfferV2(itemIds: [""" + str(item_id) + """]) {
                 nodes {
                   imageUrl
                   itemId
                   itemName
-                  priceMin
-                  offerLink
                 }
               }
             }
