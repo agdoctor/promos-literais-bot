@@ -98,12 +98,19 @@ async def fetch_product_metadata(url: str) -> dict:
     shopee_slug_title = None
     if "shopee.com.br" in url:
         try:
-            path = url.split('?')[0].rstrip('/').split('/')[-1]
-            slug = re.sub(r'-i\.\d+\.\d+$', '', path)
-            candidate = slug.replace('-', ' ').strip()
-            if len(candidate) > 8:
-                shopee_slug_title = candidate
-                print(f"[Shopee Slug] Pré-extraído: {shopee_slug_title[:60]}")
+            # Padrão: shopee.com.br/Nome-do-Produto-i.123.456
+            path_parts = url.split('?')[0].rstrip('/').split('/')
+            last_part = path_parts[-1]
+            
+            # Remove o sufixo -i.SHOP_ID.ITEM_ID se existir
+            slug = re.sub(r'-i\.\d+\.\d+$', '', last_part)
+            
+            # Se o resultado for apenas números (como em /product/123/456), não é um título válido
+            if not slug.isdigit():
+                candidate = slug.replace('-', ' ').strip()
+                if len(candidate) > 5:
+                    shopee_slug_title = candidate
+                    print(f"[Shopee Slug] Pré-extraído: {shopee_slug_title[:60]}")
         except Exception:
             pass
 
