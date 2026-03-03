@@ -989,7 +989,8 @@ async def handle_index(request):
                 i.focus();
             }}
             async function saveSet(k) {{ 
-                const val = document.getElementById('set-'+k).value;
+                const el = document.getElementById('set-'+k);
+                const val = el.type === 'checkbox' ? (el.checked ? 'true' : 'false') : el.value;
                 await api('settings','POST',{{chave:k, valor:val}}); 
                 Telegram.WebApp.showAlert("Configuração '"+k+"' salva com sucesso!"); 
             }}
