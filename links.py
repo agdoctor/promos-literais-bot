@@ -117,6 +117,7 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
                 
                 short_code = database.create_short_link(converted_url)
                 converted_url = f"{short_domain}/{short_code}"
+                print(f"🔗 Link Encurtado: {converted_url}")
 
             placeholder_map[placeholder] = converted_url
             

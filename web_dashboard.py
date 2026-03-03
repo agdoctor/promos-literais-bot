@@ -1241,7 +1241,7 @@ async def handle_post_offer(request):
             img_path = apply_watermark(img_path)
 
         from publisher import publish_deal
-        await publish_deal(text_base, img_path, None, orig_url)
+        await publish_deal(text_base, img_path, None)
         
         # --- Envio para WhatsApp (Se habilitado) ---
         try:
