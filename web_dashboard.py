@@ -1316,7 +1316,7 @@ async def handle_rewrite_tg(request):
         from links import process_and_replace_links
         from rewriter import reescrever_promocao
         
-        texto_com_nossos_links, _ = await process_and_replace_links(text, link_orig)
+        texto_com_nossos_links, _ = await process_and_replace_links(text)
         texto_reescrito = await reescrever_promocao(texto_com_nossos_links)
         
         return web.json_response({"text": texto_reescrito})
