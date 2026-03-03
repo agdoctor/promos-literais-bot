@@ -1221,6 +1221,7 @@ async def handle_post_offer(request):
              text_base += "\n\n[LINK_0]"
 
         clean_text, placeholder_map = await process_and_replace_links(text_base, orig_url)
+        text_base = clean_text
         
         # Formata botões
         if placeholder_map:
