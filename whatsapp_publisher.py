@@ -187,16 +187,20 @@ def list_whatsapp_groups():
     host_clean = host.replace("https://", "").replace("http://", "").strip("/")
     if "greenapi.com" in host_clean and "green-api.com" not in host_clean:
         host_clean = host_clean.replace("greenapi.com", "green-api.com")
-    url = f"https://{host_clean}/waInstance{instance_id_clean}/getGroups/{token}"
+    url = f"https://{host_clean}/waInstance{instance_id_clean}/getContacts/{token}"
     
     try:
         response = requests.get(url, timeout=20)
         if response.status_code == 200:
-            groups = response.json()
-            # Filtra apenas grupos onde o usuário é administrador
-            # A Green-API retorna isAdmin: True/False no método getGroups
-            admin_groups = [g for g in groups if g.get("isAdmin") is True]
+            contacts = response.json()
+            # No plano Developer, getGroups retorna 403. Usamos getContacts e filtramos por @g.us
+            admin_groups = [
+                g for g in contacts 
+                if isinstance(g, dict) and str(g.get("id", "")).endswith("@g.us")
+            ]
             return {"groups": admin_groups}
+        elif response.status_code == 403:
+            return {"error": "Erro Green-API (403): Verifique se o ID e Token estão corretos no painel da Green-API."}
         else:
             return {"error": f"Erro Green-API ({response.status_code}): {response.text}"}
     except Exception as e:
