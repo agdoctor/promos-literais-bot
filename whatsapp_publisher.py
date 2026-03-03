@@ -185,6 +185,8 @@ def list_whatsapp_groups():
         return {"error": "Faltam credenciais da Green-API."}
 
     host_clean = host.replace("https://", "").replace("http://", "").strip("/")
+    if "greenapi.com" in host_clean and "green-api.com" not in host_clean:
+        host_clean = host_clean.replace("greenapi.com", "green-api.com")
     url = f"https://{host_clean}/waInstance{instance_id_clean}/getGroups/{token}"
     
     try:
