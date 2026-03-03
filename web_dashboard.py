@@ -853,11 +853,11 @@ async def handle_index(request):
                     {{k:'preco_minimo',l:'Preço Mínimo'}},
                     {{k:'assinatura',l:'Assinatura'}},
                     {{k:'webapp_url',l:'WebApp URL'}},
-                    {{k:'whatsapp_enabled',l:'✅ Habilitar WhatsApp (true/false)'}},
+                    {{k:'whatsapp_enabled',l:'✅ Habilitar WhatsApp', t:'bool'}},
                     {{k:'green_api_instance_id',l:'ID Instância Green-API'}},
                     {{k:'green_api_token',l:'Token Green-API'}},
                     {{k:'green_api_host',l:'Host Green-API (ex: 7103.api.greenapi.com)'}},
-                    {{k:'whatsapp_destination',l:'ID Grupo/Comunidade WA'}}
+                    {{k:'whatsapp_destination',l:'🆔 ID Grupo(s) WA (separe por vírgula)'}}
                 ];
                 const c = document.getElementById('settings-form');
                 c.innerHTML = "Carregando...";
@@ -876,17 +876,78 @@ async def handle_index(request):
                                     <button type="button" onclick="tag('code')" style="padding:2px 8px; font-size:12px">&lt;&gt;</button>
                                  </div>
                                  <textarea id="set-${{x.k}}" oninput="updateSettingsPreview(this.value)" style="height:120px; font-family:monospace; font-size:12px;">${{v.valor}}</textarea>
-                                 <div id="html-preview" style="background:#000; padding:10px; border-radius:4px; margin:5px 0; font-size:12px; border:1px dashed var(--border)">
+                                 <div style="margin-top:10px; padding:10px; background:var(--bg-card); border-radius:8px; border:1px dashed var(--border)">
                                     <small style="color:var(--text-dim);display:block;margin-bottom:5px">Preview Visual (Telegram HTML):</small>
                                     <div id="preview-content" style="white-space: pre-wrap;">${{v.valor}}</div>
-                                 </div>` 
-                               : `<input id="set-${{x.k}}" value="${{v.valor}}">`
-                        }}
+                                 </div>
+                        ` : x.t === 'bool' ? `
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;" class="toggle-switch">
+                                    <input type="checkbox" id="set-${{x.k}}" ${{v.valor === 'true' ? 'checked' : ''}}>
+                                    Ativo
+                                </label>
+                        ` : `
+                                <div style="display:flex; flex-direction:column; gap:8px;">
+                                    <input id="set-${{x.k}}" value="${{v.valor}}">
+                                    ${{x.k === 'whatsapp_destination' ? `
+                                        <button onclick="loadWAGroups()" style="font-size:12px; background:var(--bg-card); color:var(--accent); border-style:dashed;">🔍 Ver Meus Grupos</button>
+                                        <div id="wa-groups-list-settings" style="display:none; max-height:200px; overflow-y:auto;"></div>
+                                    ` : ''}}
+                                </div>
+                        `}}
                         <button onclick="saveSet('${{x.k}}')" class="primary" style="margin-top:5px;width:100%">Salvar</button>
                         <hr style="border:0; border-top:1px solid var(--border); margin:15px 0;">
                     `;
                 }}
                 c.innerHTML = html;
+            }}
+
+            async function loadWAGroups() {{
+                const container = document.getElementById('wa-groups-list-settings');
+                if(!container) return;
+                container.style.display = 'block';
+                container.innerHTML = "Carregando grupos...";
+                try {{
+                    const r = await fetch(`/api/wa_groups?token=${{token}}`);
+                    const data = await r.json();
+                    if(data.error) {{
+                        container.innerHTML = `<span style="color:var(--error)">${{data.error}}</span>`;
+                        return;
+                    }}
+                    const groups = data.groups || [];
+                    if(groups.length === 0) {{
+                        container.innerHTML = "Nenhum grupo encontrado.";
+                        return;
+                    }}
+                    let html = '<ul style="margin-top:10px; border:1px solid var(--border); border-radius:8px; padding:0 10px; background:var(--bg-main)">';
+                    groups.forEach(g => {{
+                        const name = g.name || g.contactName || "Sem Nome";
+                        const id = g.id;
+                        html += `
+                            <li style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0;">
+                                <div style="font-weight: bold; font-size: 14px;">${{name}}</div>
+                                <div style="font-family: monospace; color: var(--accent); cursor: pointer; font-size: 12px;" onclick="selectWAGroup('${{id}}')">
+                                    ${{id}} 📋
+                                </div>
+                            </li>
+                        `;
+                    }});
+                    html += '</ul>';
+                    container.innerHTML = html;
+                }} catch(e) {{
+                    container.innerHTML = "Erro ao carregar.";
+                }}
+            }}
+
+            function selectWAGroup(id) {{
+                const input = document.getElementById('set-whatsapp_destination');
+                if(input) {{
+                    input.value = id;
+                    if(window.Telegram && window.Telegram.WebApp) {{
+                        Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                        input.style.backgroundColor = 'rgba(212, 42, 120, 0.2)'; /* literally_bot accent colors */
+                        setTimeout(() => input.style.backgroundColor = 'var(--bg-main)', 1000);
+                    }}
+                }}
             }}
             function updateSettingsPreview(val) {{
                 const p = document.getElementById('preview-content');
@@ -1238,6 +1299,18 @@ async def handle_rewrite_tg(request):
         traceback.print_exc()
         return web.json_response({"error": str(e)}, status=500)
 
+async def handle_wa_groups(request):
+    token = request.query.get('token')
+    valid_token = get_config("console_token")
+    if not valid_token or token != valid_token:
+        return web.json_response({"error": "Unauthorized"}, status=403)
+    try:
+        from whatsapp_publisher import list_whatsapp_groups
+        groups = await list_whatsapp_groups()
+        return web.json_response({"groups": groups})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
 async def start_web_server():
     if not get_config("console_token"): set_config("console_token", secrets.token_urlsafe(16))
     app = web.Application()
@@ -1260,6 +1333,7 @@ async def start_web_server():
     app.router.add_post('/api/generate_text', handle_generate_text)
     app.router.add_post('/api/preview_links', handle_preview_links)
     app.router.add_post('/api/post_offer', handle_post_offer)
+    app.router.add_get('/api/wa_groups', handle_wa_groups)
     
     # Servir arquivos estáticos (como a imagem principal)
     assets_dir = os.path.join(os.path.dirname(__file__), 'assets')
