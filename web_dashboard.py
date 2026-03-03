@@ -913,17 +913,27 @@ async def handle_index(request):
                         container.innerHTML = `<span style="color:var(--error)">${{data.error}}</span>`;
                         return;
                     }}
-                    const groups = data.groups || [];
+                    let groups = data.groups || [];
                     if(groups.length === 0) {{
                         container.innerHTML = "Nenhum grupo encontrado.";
                         return;
                     }}
-                    let html = '<ul style="margin-top:10px; border:1px solid var(--border); border-radius:8px; padding:0 10px; background:var(--bg-main)">';
+                    
+                    // Ordenar alfabeticamente
+                    groups.sort((a, b) => {{
+                        const nameA = a.name || a.contactName || "Sem Nome";
+                        const nameB = b.name || b.contactName || "Sem Nome";
+                        return nameA.localeCompare(nameB);
+                    }});
+
+                    let html = `<input type="text" id="wa-groups-search" placeholder="🔍 Buscar grupo..." onkeyup="filterWAGroups()" style="width: 100%; padding: 8px; margin-top: 10px; margin-bottom: 5px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-sec); color: var(--text); box-sizing: border-box; font-size: 13px;">`;
+                    html += '<ul id="wa-groups-ul" style="border:1px solid var(--border); border-radius:8px; padding:0 10px; background:var(--bg-main)">';
+                    
                     groups.forEach(g => {{
                         const name = g.name || g.contactName || "Sem Nome";
                         const id = g.id;
                         html += `
-                            <li style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0;">
+                            <li style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0; display: flex;">
                                 <div style="font-weight: bold; font-size: 14px;">${{name}}</div>
                                 <div style="font-family: monospace; color: var(--accent); cursor: pointer; font-size: 12px;" onclick="selectWAGroup('${{id}}')">
                                     ${{id}} 📋
@@ -935,6 +945,19 @@ async def handle_index(request):
                     container.innerHTML = html;
                 }} catch(e) {{
                     container.innerHTML = "Erro ao carregar.";
+                }}
+            }}
+
+            function filterWAGroups() {{
+                const filter = document.getElementById('wa-groups-search').value.toLowerCase();
+                const li = document.getElementById('wa-groups-ul').getElementsByTagName('li');
+                for (let i = 0; i < li.length; i++) {{
+                    const txtValue = li[i].textContent || li[i].innerText;
+                    if (txtValue.toLowerCase().indexOf(filter) > -1) {{
+                        li[i].style.display = "flex";
+                    }} else {{
+                        li[i].style.display = "none";
+                    }}
                 }}
             }}
 
