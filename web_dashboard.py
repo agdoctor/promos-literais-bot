@@ -1306,7 +1306,7 @@ async def handle_wa_groups(request):
         return web.json_response({"error": "Unauthorized"}, status=403)
     try:
         from whatsapp_publisher import list_whatsapp_groups
-        groups = await list_whatsapp_groups()
+        groups = list_whatsapp_groups()
         return web.json_response({"groups": groups})
     except Exception as e:
         return web.json_response({"error": str(e)}, status=500)
