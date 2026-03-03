@@ -1,5 +1,7 @@
 import sqlite3
 import time
+import random
+import string
 from typing import Optional
 
 DB_PATH = "bot_data.db"
@@ -81,6 +83,17 @@ def init_db():
                 ganhador_id INTEGER,
                 ganhador_nome TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Tabela de Links Encurtados
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS short_links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                short_code TEXT UNIQUE NOT NULL,
+                long_url TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                clicks INTEGER DEFAULT 0
             )
         ''')
     except:
@@ -292,6 +305,38 @@ def close_giveaway(giveaway_id: int, winner_id: int, winner_name: str):
               (winner_id, winner_name, giveaway_id))
     conn.commit()
     conn.close()
+
+# --- ENCURTADOR DE LINKS ---
+def create_short_link(long_url: str) -> str:
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Tenta gerar um código único (6 caracteres alfanuméricos)
+    chars = string.ascii_letters + string.digits
+    while True:
+        code = ''.join(random.choices(chars, k=6))
+        c.execute("SELECT 1 FROM short_links WHERE short_code = ?", (code,))
+        if not c.fetchone():
+            break
+            
+    c.execute("INSERT INTO short_links (short_code, long_url) VALUES (?, ?)", (code, long_url))
+    conn.commit()
+    conn.close()
+    return code
+
+def get_long_url_by_code(code: str) -> Optional[str]:
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT long_url FROM short_links WHERE short_code = ?", (code,))
+    row = c.fetchone()
+    if row:
+        # Incrementa o número de cliques no background
+        c.execute("UPDATE short_links SET clicks = clicks + 1 WHERE short_code = ?", (code,))
+        conn.commit()
+        conn.close()
+        return row[0]
+    conn.close()
+    return None
 
 # Aliases para compatibilidade com o literalmente_bot
 get_active_sorteios = get_active_giveaways

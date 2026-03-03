@@ -106,6 +106,18 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
             
             # 2. Converter para link de afiliado usando o módulo centralizado
             converted_url = await affiliate.convert_to_affiliate(expanded_url)
+
+            # 3. Se houver domínio encurtador configurado, substituir pelo link curto
+            import database
+            short_domain = database.get_config("shortener_domain").strip()
+            if short_domain:
+                if not short_domain.startswith("http"):
+                    short_domain = "https://" + short_domain
+                short_domain = short_domain.rstrip("/")
+                
+                short_code = database.create_short_link(converted_url)
+                converted_url = f"{short_domain}/{short_code}"
+
             placeholder_map[placeholder] = converted_url
             
         except Exception as e:

@@ -853,6 +853,7 @@ async def handle_index(request):
                     {{k:'preco_minimo',l:'Preço Mínimo'}},
                     {{k:'assinatura',l:'Assinatura'}},
                     {{k:'webapp_url',l:'WebApp URL'}},
+                    {{k:'shortener_domain',l:'Domínio Encurtador (ex: https://oferta.site.com)'}},
                     {{k:'whatsapp_enabled',l:'✅ Habilitar WhatsApp', t:'bool'}},
                     {{k:'green_api_instance_id',l:'ID Instância Green-API'}},
                     {{k:'green_api_token',l:'Token Green-API'}},
@@ -1335,6 +1336,25 @@ async def handle_wa_groups(request):
     except Exception as e:
         return web.json_response({"error": str(e)}, status=500)
 
+async def handle_short_link_redirect(request):
+    code = request.match_info.get('code')
+    if not code or len(code) != 6:
+        raise web.HTTPNotFound()
+        
+    try:
+        from database import get_long_url_by_code
+        long_url = get_long_url_by_code(code)
+        if long_url:
+            raise web.HTTPFound(location=long_url)
+        else:
+            return web.Response(text="Oferta não encontrada ou código expirado.", status=404)
+    except web.HTTPFound:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.Response(text="Erro ao processar redirecionamento.", status=500)
+
 async def start_web_server():
     if not get_config("console_token"): set_config("console_token", secrets.token_urlsafe(16))
     app = web.Application()
@@ -1359,6 +1379,9 @@ async def start_web_server():
     app.router.add_post('/api/post_offer', handle_post_offer)
     app.router.add_get('/api/wa_groups', handle_wa_groups)
     
+    # Rota Curinga para redirecionamentos (Encurtador)
+    app.router.add_get(r'/{code:[a-zA-Z0-9]{6}}', handle_short_link_redirect)
+
     # Servir arquivos estáticos (como a imagem principal)
     assets_dir = os.path.join(os.path.dirname(__file__), 'assets')
     if os.path.exists(assets_dir):
