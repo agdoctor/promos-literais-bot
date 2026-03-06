@@ -31,14 +31,14 @@ def format_whatsapp_text(html_text: str) -> str:
         
         # Se for um link genérico/CTA, formatamos como "Botão Visual" destacado com emojis
         if label.lower() in generics or not label:
-            return f"\n\n*🛍️ PEGAR PROMOÇÃO:* {url}"
+            return f"\n\n*🛍️ PEGAR PROMOÇÃO:*\n{url}"
         
         # Se for um link informativo (ex: Cupom ou Canal), mantemos mais discreto/inline
         if len(label) < 15 or "t.me/" in url.lower():
             return f" *{label.upper()}*: {url} "
             
         # Para outros links (ex: títulos), usamos um formato de destaque simples
-        return f"\n\n*👉 {label.upper()}:* {url}"
+        return f"\n\n*👉 {label.upper()}:*\n{url}"
 
     # Regex robusta para links (suporta aspas simples e duplas)
     text = re.sub(r'<a\s+.*?href=["\'](.*?)["\'].*?>(.*?)</a>', link_repl, text, flags=re.DOTALL | re.IGNORECASE)
