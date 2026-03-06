@@ -8,14 +8,25 @@ async def expand_url(short_url: str) -> str:
     """
     try:
         # Usamos follow_redirects=True para acompanhar toda a cadeia até o link final da loja
-        # O User-Agent previne que bloqueios automáticos do Mercado Livre ou Amazon rejeitem a conexão
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         async with httpx.AsyncClient(follow_redirects=True, timeout=15.0, headers=headers) as client:
             response = await client.get(short_url)
-            # A URL final
-            return str(response.url)
+            final_url = str(response.url)
+            
+            # --- RECUPERAÇÃO DE ANTI-BOT ML ---
+            # Se o Mercado Livre redirecionar para verificação de conta, extraímos o link real do parâmetro 'go'
+            if "/gz/account-verification" in final_url and "go=" in final_url:
+                from urllib.parse import unquote
+                parsed = urlparse(final_url)
+                qs = parse_qs(parsed.query)
+                if 'go' in qs:
+                    recovered_url = unquote(qs['go'][0])
+                    print(f"[ML] Anti-Bot detectado! Recuperando URL original de 'go': {recovered_url}")
+                    return recovered_url
+            
+            return final_url
     except Exception as e:
         print(f"Erro ao expandir URL {short_url}: {e}")
         return short_url

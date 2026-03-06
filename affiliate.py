@@ -96,8 +96,9 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
         except Exception as e:
             print(f"[!] Erro ao acessar vitrine social: {e}")
 
-    # Expandir URL caso seja encurtada (ex: mercadolivre.com/sec/...)
-    if 'mercadolivre.com/sec/' in target_product_url or 'meli.la/' in target_product_url:
+    # Expandir URL caso seja encurtada (ex: mercadolivre.com/sec, meli.la, etc)
+    short_patterns = ['mercadolivre.com/sec/', 'mercadolivre.com.br/sec/', 'meli.la/']
+    if any(p in target_product_url for p in short_patterns):
         print(f"[ML] Expandindo URL curta: {target_product_url}")
         from links import expand_url
         target_product_url = await expand_url(target_product_url)
