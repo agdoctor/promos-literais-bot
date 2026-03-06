@@ -1443,40 +1443,57 @@ async def handle_short_link_redirect(request):
 
                 <style>
                     body {{ 
-                        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
                         display: flex; 
                         align-items: center; 
                         justify-content: center; 
                         height: 100vh; 
                         margin: 0; 
-                        background: radial-gradient(circle, #2d0b1a 0%, #1a050e 100%); 
-                        color: white; 
+                        background: linear-gradient(-45deg, #BEDAE3, #C4E9DA, #FED5CF, #D3C7E6);
+                        background-size: 400% 400%;
+                        animation: gradient 15s ease infinite;
+                        color: #4a4a4a; 
                         overflow: hidden;
+                    }}
+                    @keyframes gradient {{
+                        0% {{ background-position: 0% 50%; }}
+                        50% {{ background-position: 100% 50%; }}
+                        100% {{ background-position: 0% 50%; }}
                     }}
                     .container {{ 
                         text-align: center; 
-                        padding: 40px;
-                        background: rgba(255, 255, 255, 0.03);
-                        border-radius: 24px;
-                        backdrop-filter: blur(10px);
-                        border: 1px solid rgba(255, 102, 163, 0.2);
-                        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+                        padding: 50px 40px;
+                        background: rgba(255, 255, 255, 0.7);
+                        border-radius: 32px;
+                        backdrop-filter: blur(20px);
+                        -webkit-backdrop-filter: blur(20px);
+                        border: 1px solid rgba(255, 255, 255, 0.5);
+                        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+                        max-width: 90%;
+                        width: 400px;
                     }}
                     .loader {{ 
-                        border: 3px solid rgba(255, 102, 163, 0.1); 
-                        border-top: 3px solid #ff66a3; 
+                        border: 4px solid rgba(0, 0, 0, 0.05); 
+                        border-top: 4px solid #F1B598; 
                         border-radius: 50%; 
                         width: 50px; 
                         height: 50px; 
                         animation: spin 1s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite; 
-                        margin: 0 auto 25px; 
-                        box-shadow: 0 0 15px rgba(255, 102, 163, 0.4);
+                        margin: 0 auto 30px; 
                     }}
                     @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
-                    h2 {{ color: #ff66a3; margin: 0 0 10px 0; font-weight: 600; letter-spacing: 0.5px; }}
-                    p {{ margin: 0; font-size: 18px; opacity: 0.9; }}
-                    .footer {{ margin-top: 30px; font-size: 13px; opacity: 0.5; }}
-                    a {{ color: #ff66a3; text-decoration: none; font-weight: bold; }}
+                    h2 {{ 
+                        color: #333; 
+                        margin: 0 0 15px 0; 
+                        font-weight: 700; 
+                        letter-spacing: -0.5px;
+                        font-size: 22px;
+                        line-height: 1.2;
+                    }}
+                    p {{ margin: 0; font-size: 16px; opacity: 0.7; font-weight: 500; }}
+                    .footer {{ margin-top: 35px; font-size: 13px; opacity: 0.6; }}
+                    a {{ color: #F1B598; text-decoration: none; font-weight: 700; border-bottom: 2px solid rgba(241, 181, 152, 0.3); }}
+                    a:hover {{ border-bottom-color: #F1B598; }}
                 </style>
                 <meta http-equiv="refresh" content="2.5;url={long_url}">
             </head>
@@ -1484,9 +1501,9 @@ async def handle_short_link_redirect(request):
                 <div class="container">
                     <div class="loader"></div>
                     <h2>Aguarde Leitora! Estamos te levando para a a oferta...</h2>
-                    <p>Aguarde um instante...</p>
+                    <p>Preparando tudo para você.</p>
                     <div class="footer">
-                        Se não for redirecionada em 3 segundos, <a href="{long_url}">clique aqui</a>.
+                        Se não for redirecionada em instantes, <a href="{long_url}">clique aqui</a>.
                     </div>
                 </div>
                 <script>
