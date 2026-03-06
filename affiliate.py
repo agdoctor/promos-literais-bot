@@ -48,6 +48,14 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
         print("[!] ML_AFFILIATE_COOKIE nao configurado. Configure no Painel > Afiliados.")
         return original_url
 
+    # Obter a tag de afiliado do banco ou tentar extrair do cookie (orgnickp)
+    ml_tag = get_config("ML_AFFILIATE_TAG")
+    if not ml_tag:
+        import re as _re_tag
+        tag_match = _re_tag.search(r'orgnickp=([^;]+)', ml_cookie)
+        ml_tag = tag_match.group(1).strip().lower() if tag_match else 'promosliterais'
+    print(f"[ML] Usando tag de afiliado: {ml_tag}")
+
     parsed = urlparse(original_url)
     target_product_url = original_url
 
@@ -96,23 +104,34 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
 
     try:
         print(f"Convertendo ML via API Stripe: {clean_url}")
-        # A API Stripe exige um NOVO cliente httpx para no enviar _csrf cookies das requisies anteriores
+        
+        # Sanitizar o cookie: remover caracteres não-ASCII que causam erro de header no httpx
+        ml_cookie_safe = ml_cookie.encode('ascii', errors='ignore').decode('ascii')
+        
+        # Extrair o token CSRF do cookie pois a API do ML exige como header separado
+        import re as _re
+        csrf_match = _re.search(r'_csrf=([^;]+)', ml_cookie_safe)
+        csrf_token = csrf_match.group(1).strip() if csrf_match else ''
+        
         async with httpx.AsyncClient(timeout=10.0) as api_client:
             api_headers = {
                 'Content-Type': 'application/json',
-                'Cookie': ml_cookie,
+                'Cookie': ml_cookie_safe,
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'application/json, text/plain, */*',
                 'Origin': 'https://www.mercadolivre.com.br',
-                'Referer': clean_url,
+                'Referer': 'https://www.mercadolivre.com.br/afiliados/linkbuilder',
+                'x-csrf-token': csrf_token,
             }
+            # Endpoint correto descoberto analisando o Link Builder oficial do ML
+            # Recebe URLs em lista e retorna short_url por item
             body = {
-                'url': clean_url,
-                'tag': 'drmkt'
+                'urls': [clean_url],
+                'tag': ml_tag
             }
             
             response = await api_client.post(
-                'https://www.mercadolivre.com.br/affiliate-program/api/v2/stripe/user/links',
+                'https://www.mercadolivre.com.br/affiliate-program/api/v2/affiliates/createLink',
                 headers=api_headers,
                 json=body,
                 follow_redirects=False
@@ -127,11 +146,12 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
                 return fallback_social_url
 
             data = response.json()
-            if isinstance(data, dict):
-                short_url = data.get('url') or data.get('short_url')
+            # Novo endpoint retorna lista de objetos: [{"url": "...", "short_url": "...", ...}]
+            if isinstance(data, list) and len(data) > 0:
+                short_url = data[0].get('short_url') or data[0].get('url')
                 if short_url: return short_url
-            elif isinstance(data, list) and len(data) > 0:
-                short_url = data[0].get('short_url')
+            elif isinstance(data, dict):
+                short_url = data.get('short_url') or data.get('url')
                 if short_url: return short_url
 
             return fallback_social_url
