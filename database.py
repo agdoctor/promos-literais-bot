@@ -96,6 +96,18 @@ def init_db():
                 clicks INTEGER DEFAULT 0
             )
         ''')
+
+        # Tabela de Posts Publicados
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                image_path TEXT,
+                post_url TEXT,
+                short_code TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
     except:
         pass
         
@@ -370,4 +382,41 @@ def get_total_clicks():
     c.execute("SELECT SUM(clicks) FROM short_links")
     res = c.fetchone()[0] or 0
     conn.close()
-    return res
+def add_post(title: str, image_path: str, post_url: str, short_code: str):
+    """Registra um novo post publicado para exibição no dashboard"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO posts (title, image_path, post_url, short_code) VALUES (?, ?, ?, ?)",
+              (title, image_path, post_url, short_code))
+    conn.commit()
+    conn.close()
+
+def get_posts(search=None, sort="recent", offset=0, limit=20):
+    """Retorna posts com busca, ordenação e paginação"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    
+    query = """
+        SELECT p.*, COALESCE(sl.clicks, 0) as clicks 
+        FROM posts p
+        LEFT JOIN short_links sl ON p.short_code = sl.short_code
+    """
+    params = []
+    
+    if search:
+        query += " WHERE p.title LIKE ?"
+        params.append(f"%{search}%")
+    
+    if sort == "clicked":
+        query += " ORDER BY clicks DESC, p.created_at DESC"
+    else:
+        query += " ORDER BY p.created_at DESC"
+        
+    query += " LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    
+    c.execute(query, params)
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows

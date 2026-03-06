@@ -131,11 +131,108 @@ async def handle_index(request):
                 border-radius: 8px;
                 border: 1px solid var(--accent);
             }}
+            /* Seção de Posts */
+            .post-item {{
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 12px;
+                margin-bottom: 12px;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }}
+            .post-item:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 6px 15px rgba(255,102,163,0.15);
+                border-color: var(--accent);
+            }}
+            .post-img {{
+                width: 80px;
+                height: 80px;
+                object-fit: contain;
+                border-radius: 8px;
+                background: #fff;
+                padding: 4px;
+                flex-shrink: 0;
+            }}
+            .post-info {{
+                flex-grow: 1;
+                min-width: 0;
+            }}
+            .post-title {{
+                font-size: 14px;
+                font-weight: 700;
+                margin-bottom: 6px;
+                color: var(--text);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }}
+            .post-stats {{
+                display: flex;
+                gap: 12px;
+                font-size: 12px;
+                color: var(--text-dim);
+                align-items: center;
+            }}
+            .post-clicks {{
+                background: rgba(255, 102, 163, 0.15);
+                color: var(--accent);
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-weight: 700;
+            }}
+            .post-link-btn {{
+                background: var(--accent);
+                color: var(--bg-main);
+                padding: 6px 12px;
+                border-radius: 6px;
+                font-size: 11px;
+                text-decoration: none;
+                font-weight: 800;
+                text-transform: uppercase;
+                transition: opacity 0.2s;
+            }}
+            .post-link-btn:hover {{ opacity: 0.9; color: var(--bg-main); }}
+            #posts-scroll-indicator {{
+                text-align: center;
+                padding: 20px;
+                color: var(--text-dim);
+                font-size: 13px;
+            }}
+            .search-container {{
+                display: flex;
+                gap: 10px;
+                margin-bottom: 15px;
+            }}
+            .filter-tabs {{
+                display: flex;
+                gap: 8px;
+                margin-bottom: 15px;
+            }}
+            .filter-btn {{
+                padding: 6px 12px;
+                font-size: 11px;
+                border-radius: 20px;
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                color: var(--text-dim);
+                cursor: pointer;
+                transition: all 0.2s;
+            }}
+            .filter-btn.active {{
+                background: var(--accent);
+                color: var(--bg-main);
+                border-color: var(--accent);
+            }}
         </style>
     </head>
     <body>
         <div id="navbar">
             <div class="nav-item active" onclick="showTab('dashboard', this)">🏠 Painel</div>
+            <div class="nav-item" onclick="showTab('posts', this); loadPosts(true)">📊 Posts</div>
             <div class="nav-item" onclick="showTab('enviar', this)">🚀 Enviar</div>
             <div class="nav-item" onclick="showTab('canais', this)">📺 Canais</div>
             <div class="nav-item" onclick="showTab('keywords', this)">🔑 Keywords</div>
@@ -187,6 +284,28 @@ async def handle_index(request):
                         <input type="checkbox" id="check-aprovacao" onchange="toggleAprovacao()">
                         Aprovação Manual de ofertas
                     </label>
+                </div>
+            </div>
+            <div id="tab-posts" class="tab-content">
+                <div class="card">
+                    <div class="card-title">📊 Histórico de Publicações</div>
+                    
+                    <div class="search-container">
+                        <input type="text" id="post-search" placeholder="🔍 Buscar oferta pelo título..." oninput="debounceSearch()">
+                    </div>
+                    
+                    <div class="filter-tabs">
+                        <button class="filter-btn active" id="filter-recent" onclick="setPostSort('recent')">Mais Recentes</button>
+                        <button class="filter-btn" id="filter-clicked" onclick="setPostSort('clicked')">Mais Clicadas</button>
+                    </div>
+
+                    <div id="posts-list">
+                        <!-- Posts serão carregados aqui -->
+                    </div>
+                    
+                    <div id="posts-scroll-indicator">
+                        Carregando posts...
+                    </div>
                 </div>
             </div>
             <div id="tab-enviar" class="tab-content">
@@ -475,6 +594,88 @@ async def handle_index(request):
                 const r = await fetch(`/api/${{p}}${{s}}token=${{token}}`, {{ method: m, body: b ? JSON.stringify(b) : null, headers: {{'Content-Type':'application/json'}} }});
                 return await r.json();
             }}
+            let postsOffset = 0;
+            let postsLoading = false;
+            let postsHasMore = true;
+            let postsSort = 'recent';
+            let postsSearch = '';
+            let searchDebounce = null;
+
+            async function loadPosts(reset = false) {{
+                if (reset) {{
+                    postsOffset = 0;
+                    postsHasMore = true;
+                    document.getElementById('posts-list').innerHTML = '';
+                    document.getElementById('posts-scroll-indicator').innerText = 'Carregando posts...';
+                }}
+                
+                if (postsLoading || !postsHasMore) return;
+                
+                postsLoading = true;
+                const limit = 20;
+                try {{
+                    const url = `posts?search=${{encodeURIComponent(postsSearch)}}&sort=${{postsSort}}&offset=${{postsOffset}}&limit=${{limit}}`;
+                    const posts = await api(url);
+                    
+                    if (posts.length < limit) {{
+                        postsHasMore = false;
+                        document.getElementById('posts-scroll-indicator').innerText = posts.length === 0 && reset ? 'Nenhum post encontrado.' : 'Fim dos posts.';
+                    }} else {{
+                        document.getElementById('posts-scroll-indicator').innerText = 'Carregue mais...';
+                    }}
+                    
+                    const list = document.getElementById('posts-list');
+                    posts.forEach(p => {{
+                        const item = document.createElement('div');
+                        item.className = 'post-item';
+                        const imgSrc = p.image_path ? `/api/image?path=${{encodeURIComponent(p.image_path)}}&token=${{token}}` : '/assets/pudim_home_painel.png';
+                        item.innerHTML = `
+                            <img src="${{imgSrc}}" class="post-img" onerror="this.src='/assets/pudim_home_painel.png'">
+                            <div class="post-info">
+                                <div class="post-title">${{p.title}}</div>
+                                <div class="post-stats">
+                                    <span class="post-clicks">🖱️ ${{p.clicks}} clicks</span>
+                                    <span>🗓️ ${{new Date(p.created_at).toLocaleDateString()}}</span>
+                                </div>
+                            </div>
+                            ${{p.post_url ? `<a href="${{p.post_url}}" target="_blank" class="post-link-btn">Canal</a>` : ''}}
+                        `;
+                        list.appendChild(item);
+                    }});
+                    
+                    postsOffset += posts.length;
+                }} catch (e) {{
+                    console.error(e);
+                    document.getElementById('posts-scroll-indicator').innerText = 'Erro ao carregar.';
+                }} finally {{
+                    postsLoading = false;
+                }}
+            }}
+
+            function debounceSearch() {{
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(() => {{
+                    postsSearch = document.getElementById('post-search').value;
+                    loadPosts(true);
+                }}, 500);
+            }}
+
+            function setPostSort(s) {{
+                postsSort = s;
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('filter-' + s).classList.add('active');
+                loadPosts(true);
+            }}
+
+            // Infinite Scroll Listener
+            document.querySelector('main').addEventListener('scroll', function(e) {{
+                if (currentTab !== 'posts') return;
+                const {{ scrollTop, scrollHeight, clientHeight }} = e.target;
+                if (scrollTop + clientHeight >= scrollHeight - 100) {{
+                    loadPosts();
+                }}
+            }});
+
             async function loadStatus() {{
                 const d = await api('status');
                 document.getElementById('status-container').innerHTML = `
@@ -1283,8 +1484,30 @@ async def handle_post_offer(request):
             img_path = apply_watermark(img_path)
 
         from publisher import publish_deal
-        await publish_deal(text_base, img_path, None)
+        post_url = await publish_deal(text_base, img_path, None)
         
+        # --- NOVO: Salvar Metadados do Post para o Dashboard ---
+        try:
+            from database import add_post
+            # Tentar extrair um título simples (primeira linha ou primeiras palavras)
+            first_line = re.sub('<[^<]+?>', '', clean_text.split('\n')[0]).strip()
+            title = first_line[:100] if first_line else "Oferta sem título"
+            
+            # Tentar identificar o short_code gerado
+            short_code = None
+            if placeholder_map:
+                # O process_and_replace_links usa create_short_link que retorna o código
+                # Vamos tentar pegar o código do primeiro link resolvido que aponte para o nosso encurtador
+                short_domain = get_config("short_domain") or request.host
+                for final_url in placeholder_map.values():
+                    if short_domain in final_url:
+                        short_code = final_url.split('/')[-1]
+                        break
+            
+            add_post(title, img_path, post_url, short_code)
+        except Exception as e:
+            print(f"Erro ao salvar metadados do post: {e}")
+
         # --- Envio para WhatsApp (Se habilitado) ---
         try:
             from whatsapp_publisher import send_whatsapp_msg, format_whatsapp_text
@@ -1427,6 +1650,20 @@ async def send_fb_capi_event(pixel_id, access_token, url, client_ip, user_agent,
                     print(f"✅ CAPI Success: {resp_text}")
     except Exception as e:
         print(f"❌ Erro fatal CAPI: {e}")
+
+async def handle_posts_api(request):
+    if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
+    try:
+        from database import get_posts
+        search = request.query.get("search")
+        sort = request.query.get("sort", "recent")
+        offset = int(request.query.get("offset", 0))
+        limit = int(request.query.get("limit", 20))
+        
+        posts = get_posts(search=search, sort=sort, offset=offset, limit=limit)
+        return web.json_response(posts)
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
 
 async def handle_short_link_redirect(request):
     code = request.match_info.get('code')
@@ -1644,6 +1881,7 @@ async def start_web_server():
     app.router.add_post('/api/generate_text', handle_generate_text)
     app.router.add_post('/api/preview_links', handle_preview_links)
     app.router.add_post('/api/post_offer', handle_post_offer)
+    app.router.add_get('/api/posts', handle_posts_api)
     app.router.add_get('/api/wa_groups', handle_wa_groups)
     
     # Rota Curinga para redirecionamentos (Encurtador)
