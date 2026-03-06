@@ -849,12 +849,15 @@ async def handle_index(request):
             async function closeSorteio(id) {{ await api('sorteios','PATCH',{{id:id, winner_id:0, winner_name:'Ganhador'}}); loadSorteios(); }}
             async function loadSettings() {{
                 const f = [
-                    {{k:'delay_minutos',l:'Delay (Telegram)'}},
-                    {{k:'preco_minimo',l:'Preço Mínimo'}},
-                    {{k:'assinatura',l:'Assinatura'}},
-                    {{k:'webapp_url',l:'WebApp URL'}},
-                    {{k:'shortener_domain',l:'Domínio Encurtador (ex: https://oferta.site.com)'}},
-                    {{k:'whatsapp_enabled',l:'✅ Habilitar WhatsApp', t:'bool'}},
+                    {k:'delay_minutos',l:'Delay (Telegram)'},
+                    {k:'preco_minimo',l:'Preço Mínimo'},
+                    {k:'assinatura',l:'Assinatura'},
+                    {k:'webapp_url',l:'WebApp URL'},
+                    {k:'shortener_domain',l:'Domínio Encurtador (ex: https://oferta.site.com)'},
+                    {k:'fb_pixel_id',l:'Facebook Pixel ID (ex: 123456789)'},
+                    {k:'fb_access_token',l:'Facebook Access Token (CAPI)'},
+                    {k:'google_analytics_id',l:'Google Analytics ID (ex: G-XXXXXXX)'},
+                    {k:'whatsapp_enabled',l:'✅ Habilitar WhatsApp', t:'bool'},
                     {{k:'green_api_instance_id',l:'ID Instância Green-API'}},
                     {{k:'green_api_token',l:'Token Green-API'}},
                     {{k:'green_api_host',l:'Host Green-API (ex: 7103.api.greenapi.com)'}},
@@ -1337,16 +1340,131 @@ async def handle_wa_groups(request):
     except Exception as e:
         return web.json_response({"error": str(e)}, status=500)
 
+async def send_fb_capi_event(pixel_id, access_token, url, client_ip, user_agent):
+    """Envia evento de PageView para o Facebook via API de Conversões (CAPI)"""
+    import time
+    import hashlib
+    
+    endpoint = f"https://graph.facebook.com/v18.0/{pixel_id}/events"
+    
+    # Hash do IP e User Agent para privacidade (opcional mas recomendado pelo FB)
+    payload = {
+        "data": [{
+            "event_name": "PageView",
+            "event_time": int(time.time()),
+            "action_source": "website",
+            "event_source_url": url,
+            "user_data": {
+                "client_ip_address": client_ip,
+                "client_user_agent": user_agent,
+            }
+        }],
+        "access_token": access_token
+    }
+    
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            async with session.post(endpoint, json=payload) as resp:
+                # print(f"CAPI Response: {resp.status}")
+                pass
+    except Exception as e:
+        print(f"Erro CAPI: {e}")
+
 async def handle_short_link_redirect(request):
     code = request.match_info.get('code')
     if not code or len(code) != 6:
         raise web.HTTPNotFound()
         
     try:
-        from database import get_long_url_by_code
+        from database import get_long_url_by_code, get_config
         long_url = get_long_url_by_code(code)
+        
         if long_url:
-            raise web.HTTPFound(location=long_url)
+            fb_pixel = get_config("fb_pixel_id")
+            fb_token = get_config("fb_access_token")
+            ga_id = get_config("google_analytics_id")
+            
+            # Se tiver CAPI (Token + Pixel), dispara em segundo plano
+            if fb_pixel and fb_token:
+                # Pega IP real (considerando proxy)
+                client_ip = request.headers.get('X-Forwarded-For', request.remote)
+                user_agent = request.headers.get('User-Agent', '')
+                current_url = str(request.url)
+                
+                # Dispara tarefa em background para não atrasar o redirecionamento
+                import asyncio
+                asyncio.create_task(send_fb_capi_event(fb_pixel, fb_token, current_url, client_ip, user_agent))
+                
+                # Se NÃO houver Google Analytics (que exige página de ponte), 
+                # podemos fazer o redirect 301 instantâneo agora!
+                if not ga_id:
+                    raise web.HTTPFound(location=long_url)
+
+            # Se chegamos aqui, ou só tem Pixel comum (sem token) ou tem GA
+            # Em ambos os casos, precisamos da página de ponte
+            if not fb_pixel and not ga_id:
+                raise web.HTTPFound(location=long_url)
+            
+            # Se houver tracking que exige navegador (Pixel JS ou GA), envia página de ponte
+            html_bridge = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Carregando oferta...</title>
+                
+                <!-- Google Analytics -->
+                {f'''
+                <script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>
+                <script>
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){{dataLayer.push(arguments);}}
+                  gtag('js', new Date());
+                  gtag('config', '{ga_id}');
+                </script>
+                ''' if ga_id else ""}
+
+                <!-- Facebook Pixel (Apenas se não carregou via CAPI ou para redundância) -->
+                {f'''
+                <script>
+                  !function(f,b,e,v,n,t,s)
+                  {{if(f.fbq)return;n=f.fbq=function(){{n.callMethod?
+                  n.callMethod.apply(n,arguments):n.queue.push(arguments)}};
+                  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                  n.queue=[];t=b.createElement(e);t.async=!0;
+                  t.src=v;s=b.getElementsByTagName(e)[0];
+                  s.parentNode.insertBefore(t,s)}}(window, document,'script',
+                  'https://connect.facebook.net/en_US/fbevents.js');
+                  fbq('init', '{fb_pixel}');
+                  fbq('track', 'PageView');
+                </script>
+                <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={fb_pixel}&ev=PageView&noscript=1"/></noscript>
+                ''' if (fb_pixel and not fb_token) else ""}
+
+                <style>
+                    body {{ font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #1c0e15; color: white; }}
+                    .loader {{ border: 4px solid #f3f3f3; border-top: 4px solid #ff66a3; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin-bottom: 20px; }}
+                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                    .container {{ text-align: center; }}
+                </style>
+                <meta http-equiv="refresh" content="{"0" if (fb_pixel and fb_token and ga_id) else "2"};url={long_url}">
+            </head>
+            <body>
+                <div class="container">
+                    <div class="loader"></div>
+                    <p>Redirecionando para a oferta...</p>
+                    <small style="opacity: 0.5">Clique <a href="{long_url}" style="color: #ff66a3">aqui</a> se não for redirecionado.</small>
+                </div>
+                <script>
+                    // Backup redirect via JS
+                    setTimeout(function() {{ window.location.href = "{long_url}"; }}, {500 if (fb_pixel and fb_token and ga_id) else 2500});
+                </script>
+            </body>
+            </html>
+            """
+            return web.Response(text=html_bridge, content_type='text/html')
         else:
             return web.Response(text="Oferta não encontrada ou código expirado.", status=404)
     except web.HTTPFound:
