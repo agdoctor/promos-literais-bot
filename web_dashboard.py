@@ -1405,6 +1405,15 @@ async def handle_short_link_redirect(request):
                 raise web.HTTPFound(location=long_url)
             
             # Se houver tracking que exige navegador (Pixel JS ou GA), envia página de ponte
+            lottie_json = "{}"
+            try:
+                lottie_path = os.path.join(os.path.dirname(__file__), "wired-gradient-112-book-hover-closed.json")
+                if os.path.exists(lottie_path):
+                    with open(lottie_path, "r", encoding="utf-8") as f:
+                        lottie_json = f.read()
+            except Exception as e:
+                print(f"Erro ao carregar lottie: {e}")
+
             html_bridge = f"""
             <!DOCTYPE html>
             <html>
@@ -1464,55 +1473,68 @@ async def handle_short_link_redirect(request):
                         text-align: center; 
                         padding: 50px 40px;
                         background: rgba(255, 255, 255, 0.7);
-                        border-radius: 32px;
-                        backdrop-filter: blur(20px);
-                        -webkit-backdrop-filter: blur(20px);
-                        border: 1px solid rgba(255, 255, 255, 0.5);
-                        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+                        border-radius: 40px;
+                        backdrop-filter: blur(25px);
+                        -webkit-backdrop-filter: blur(25px);
+                        border: 1px solid rgba(255, 255, 255, 0.6);
+                        box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.1);
                         max-width: 90%;
-                        width: 400px;
+                        width: 420px;
+                        animation: fadeIn 0.8s ease-out;
                     }}
-                    .loader {{ 
-                        border: 4px solid rgba(0, 0, 0, 0.05); 
-                        border-top: 4px solid #F1B598; 
-                        border-radius: 50%; 
-                        width: 50px; 
-                        height: 50px; 
-                        animation: spin 1s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite; 
-                        margin: 0 auto 30px; 
+                    @keyframes fadeIn {{
+                        from {{ opacity: 0; transform: translateY(20px); }}
+                        to {{ opacity: 1; transform: translateY(0); }}
                     }}
-                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                    #lottie-loader {{ 
+                        width: 160px; 
+                        height: 160px; 
+                        margin: 0 auto 10px; 
+                    }}
                     h2 {{ 
                         color: #333; 
-                        margin: 0 0 15px 0; 
-                        font-weight: 700; 
-                        letter-spacing: -0.5px;
-                        font-size: 22px;
+                        margin: 0 0 12px 0; 
+                        font-weight: 800; 
+                        letter-spacing: -0.8px;
+                        font-size: 24px;
                         line-height: 1.2;
                     }}
-                    p {{ margin: 0; font-size: 16px; opacity: 0.7; font-weight: 500; }}
-                    .footer {{ margin-top: 35px; font-size: 13px; opacity: 0.6; }}
-                    a {{ color: #F1B598; text-decoration: none; font-weight: 700; border-bottom: 2px solid rgba(241, 181, 152, 0.3); }}
-                    a:hover {{ border-bottom-color: #F1B598; }}
+                    p {{ margin: 0; font-size: 16px; opacity: 0.8; font-weight: 500; color: #555; }}
+                    .footer {{ margin-top: 40px; font-size: 13px; opacity: 0.6; }}
+                    a {{ color: #F1B598; text-decoration: none; font-weight: 700; border-bottom: 2px solid rgba(241, 181, 152, 0.3); transition: all 0.2s; }}
+                    a:hover {{ border-bottom-color: #F1B598; opacity: 1; }}
                 </style>
-                <meta http-equiv="refresh" content="2.5;url={long_url}">
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+                <meta http-equiv="refresh" content="3.5;url={long_url}">
             </head>
             <body>
                 <div class="container">
-                    <div class="loader"></div>
+                    <div id="lottie-loader"></div>
                     <h2>Aguarde Leitora! Estamos te levando para a a oferta...</h2>
-                    <p>Preparando tudo para você.</p>
+                    <p>Preparando tudo com carinho para você.</p>
                     <div class="footer">
                         Se não for redirecionada em instantes, <a href="{long_url}">clique aqui</a>.
                     </div>
                 </div>
                 <script>
+                    const animationData = %LOTTIE_DATA%;
+                    if (animationData && Object.keys(animationData).length > 0) {{
+                        lottie.loadAnimation({{
+                            container: document.getElementById('lottie-loader'),
+                            renderer: 'svg',
+                            loop: true,
+                            autoplay: true,
+                            animationData: animationData
+                        }});
+                    }}
+                    
                     // Backup redirect via JS
-                    setTimeout(function() {{ window.location.href = "{long_url}"; }}, 3000);
+                    setTimeout(function() {{ window.location.href = "{long_url}"; }}, 4000);
                 </script>
             </body>
             </html>
             """
+            html_bridge = html_bridge.replace("%LOTTIE_DATA%", lottie_json)
             return web.Response(text=html_bridge, content_type='text/html')
         else:
             return web.Response(text="Oferta não encontrada ou código expirado.", status=404)
