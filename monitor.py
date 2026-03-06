@@ -74,11 +74,51 @@ async def worker_queue():
             print("📤 Worker publicando oferta da fila...")
             target_url = await publish_deal(texto_final, media_path, reply_markup=reply_markup)
             
+            # --- NOVO: Salvar Metadados do Post para o Dashboard (Aba POSTS) ---
+            try:
+                if target_url: # Só salva se deu certo ir pro Telegram
+                    from database import add_post
+                    import shutil
+                    import time
+                    import re
+                    
+                    # 1. Extrair Título Simples (primeira linha limpa)
+                    first_line = re.sub('<[^<]+?>', '', texto_final.split('\n')[0]).strip()
+                    title = first_line[:100] if first_line else "Oferta automática sem título"
+                    
+                    # 2. Extrair Short Code da URL encurtada
+                    short_code = None
+                    short_domain = get_config("shortener_domain")
+                    if short_domain:
+                        # Procura o domínio encurtador no texto
+                        match = re.search(f"{short_domain}/([a-zA-Z0-9_-]+)", texto_final)
+                        if match:
+                            short_code = match.group(1)
+                            
+                    # 3. Preservar Imagem (Copiar para static/uploads)
+                    permanent_media_path = None
+                    if media_path and os.path.exists(media_path):
+                        uploads_dir = os.path.join("static", "uploads")
+                        os.makedirs(uploads_dir, exist_ok=True)
+                        
+                        ext = os.path.splitext(media_path)[1]
+                        filename = f"auto_{int(time.time())}{ext}"
+                        permanent_media_path = os.path.join(uploads_dir, filename)
+                        
+                        shutil.copy2(media_path, permanent_media_path)
+                        print(f"🖼️ Cópia da imagem salva para o Dashboard: {permanent_media_path}")
+                        
+                    # 4. Registrar no Banco
+                    add_post(title, permanent_media_path, target_url, short_code)
+                    print(f"📊 Post automático registrado na aba POSTS (Código: {short_code})")
+            except Exception as e:
+                print(f"⚠️ Erro ao registrar post no Dashboard: {e}")
+
             # --- Notificação de Conclusão ---
             admin_id_str = get_config("admin_id")
             if admin_id_str and target_url:
                 try:
-                    msg_conclusao = "✅ **Oferta Publicada com Sucesso!**\n\n"
+                    msg_conclusao = "✅ **Oferta Automática Publicada!**\n\n"
                     if source_url:
                         msg_conclusao += f"📥 [Fonte Original]({source_url})\n"
                     msg_conclusao += f"📤 [Postagem no Canal]({target_url})"
@@ -100,17 +140,19 @@ async def worker_queue():
             except Exception as e:
                 print(f"Erro ao disparar para WhatsApp: {e}")
             
-            # Limpar a mídia local depois de publicar de verdade
+            # Limpar a mídia local (temporária em downloads/) depois de publicar de verdade
             if media_path and os.path.exists(media_path):
                 try:
                     os.remove(media_path)
-                    print("🗑️ Mídia local apagada.")
+                    print("🗑️ Mídia temporária apagada.")
                 except Exception as e:
-                    print(f"Não foi possível apagar arquivo: {e}")
+                    print(f"Não foi possível apagar arquivo temporário: {e}")
                     
             post_queue.task_done()
         except Exception as e:
             print(f"Erro no worker de fila: {e}")
+            import traceback
+            traceback.print_exc()
             await asyncio.sleep(5)
 
 # Cache global para IDs dos canais monitorados
