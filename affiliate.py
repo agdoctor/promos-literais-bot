@@ -100,7 +100,7 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
     clean_url = clean_tracking_params(target_product_url)
 
     # Se a API falhar, o fallback  passar a URL original inteira (ou limpa) no ref do nosso link social genrico
-    fallback_social_url = f"https://www.mercadolivre.com.br/social/drmkt?forceInApp=true&matt_word=drmk&ref={clean_url}"
+    fallback_social_url = f"https://www.mercadolivre.com.br/social/{ml_tag}?forceInApp=true&matt_word=drmk&ref={clean_url}"
 
     try:
         print(f"Convertendo ML via API Stripe: {clean_url}")
