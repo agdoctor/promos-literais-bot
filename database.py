@@ -42,6 +42,59 @@ def init_db():
         )
     ''')
     
+    # --- NOVAS TABELAS ---
+
+    # Tabela de Histórico para Deduplicação (Cooldown 60 min)
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS history (
+            hash_id TEXT PRIMARY KEY,
+            posted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Tabela de Administradores
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS admins (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT
+        )
+    ''')
+
+    # Tabela de Sorteios
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS sorteios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            premio TEXT NOT NULL,
+            status TEXT DEFAULT 'aberto', -- 'aberto', 'encerrado'
+            ganhador_id INTEGER,
+            ganhador_nome TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Tabela de Links Encurtados
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS short_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            short_code TEXT UNIQUE NOT NULL,
+            long_url TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            clicks INTEGER DEFAULT 0
+        )
+    ''')
+
+    # Tabela de Posts Publicados
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            image_path TEXT,
+            post_url TEXT,
+            short_code TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
     # Inserir dados padrão baseados no seu .env só pra começar
     try:
         from config import SOURCE_CHANNELS
@@ -55,59 +108,6 @@ def init_db():
         c.execute("INSERT OR IGNORE INTO config (chave, valor) VALUES ('delay_minutos', '0')")
         c.execute("INSERT OR IGNORE INTO config (chave, valor) VALUES ('assinatura', '')")
         c.execute("INSERT OR IGNORE INTO config (chave, valor) VALUES ('cooldown_minutos', '60')")
-
-        # --- NOVAS TABELAS ---
-
-        # Tabela de Histórico para Deduplicação (Cooldown 60 min)
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS history (
-                hash_id TEXT PRIMARY KEY,
-                posted_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        # Tabela de Administradores
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS admins (
-                user_id INTEGER PRIMARY KEY,
-                username TEXT
-            )
-        ''')
-
-        # Tabela de Sorteios
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS sorteios (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                premio TEXT NOT NULL,
-                status TEXT DEFAULT 'aberto', -- 'aberto', 'encerrado'
-                ganhador_id INTEGER,
-                ganhador_nome TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        # Tabela de Links Encurtados
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS short_links (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                short_code TEXT UNIQUE NOT NULL,
-                long_url TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                clicks INTEGER DEFAULT 0
-            )
-        ''')
-
-        # Tabela de Posts Publicados
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS posts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT,
-                image_path TEXT,
-                post_url TEXT,
-                short_code TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
     except:
         pass
         
