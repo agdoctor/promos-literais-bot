@@ -477,9 +477,40 @@ async def handle_index(request):
             async function loadStatus() {{
                 const d = await api('status');
                 document.getElementById('status-container').innerHTML = `
-                    <p>Monitorando: <b>${{d.canais_count}} canais</b></p>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <div style="background:var(--bg-main); padding:10px; border-radius:8px; border:1px solid var(--border);">
+                            <small style="color:var(--text-dim)">Monitorando</small>
+                            <div style="font-size:18px; font-weight:bold;">${{d.canais_count}} canais</div>
+                        </div>
+                        <div style="background:var(--bg-main); padding:10px; border-radius:8px; border:1px solid var(--border);">
+                            <small style="color:var(--text-dim)">Total de Cliques</small>
+                            <div style="font-size:18px; font-weight:bold; color:var(--accent)">${{d.total_clicks || 0}}</div>
+                        </div>
+                    </div>
                     <p>Keywords: <b>${{d.kw_count}}</b> (+) / <b>${{d.nkw_count}}</b> (-)</p>
                     <p>Bot: <b>${{d.pausado==='1' ? '⏸️ PAUSADO' : '▶️ ATIVO'}}</b></p>
+                    
+                    <div style="margin-top:20px; text-align:left;">
+                        <div class="card-title" style="font-size:14px; margin-bottom:10px;">📊 Links Recentes</div>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; font-size:12px; border-collapse:collapse;">
+                                <thead style="background:var(--bg-main);">
+                                    <tr>
+                                        <th style="padding:8px; text-align:left; border-bottom:1px solid var(--border);">Cód</th>
+                                        <th style="padding:8px; text-align:right; border-bottom:1px solid var(--border);">Cliques</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${{(d.recent_links || []).map(l => `
+                                        <tr>
+                                            <td style="padding:8px; border-bottom:1px solid var(--border); color:var(--text-dim)">${{l.short_code}}</td>
+                                            <td style="padding:8px; border-bottom:1px solid var(--border); text-align:right; font-weight:bold;">${{l.clicks}}</td>
+                                        </tr>
+                                    `).join('')}}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 `;
                 document.getElementById('btn-pausa').textContent = d.pausado==='1' ? '▶️ RETOMAR BOT' : '⏸️ PAUSAR BOT';
                 document.getElementById('check-only-admins').checked = d.only_admins==='1';
@@ -1035,13 +1066,16 @@ async def check_token(request):
 
 async def handle_status_api(request):
     if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
+    from database import get_total_clicks, get_short_links_stats
     return web.json_response({
         "canais_count": len(get_canais()),
         "kw_count": len(get_keywords()),
         "nkw_count": len(get_negative_keywords()),
         "pausado": get_config("pausado"),
         "aprovacao": get_config("aprovacao_manual"),
-        "only_admins": get_config("only_admins") or "0"
+        "only_admins": get_config("only_admins") or "0",
+        "total_clicks": get_total_clicks(),
+        "recent_links": get_short_links_stats(5)
     })
 
 async def handle_restart_api(request):
@@ -1397,10 +1431,12 @@ async def handle_short_link_redirect(request):
         raise web.HTTPNotFound()
         
     try:
-        from database import get_long_url_by_code, get_config
+        from database import get_long_url_by_code, get_config, increment_click
         long_url = get_long_url_by_code(code)
         
         if long_url:
+            # Incrementar contador de cliques
+            increment_click(code)
             fb_pixel = get_config("fb_pixel_id")
             fb_token = get_config("fb_access_token")
             ga_id = get_config("google_analytics_id")

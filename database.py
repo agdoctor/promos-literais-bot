@@ -345,3 +345,29 @@ finalize_sorteio = close_giveaway
 
 # Inicializa o banco ao importar
 init_db()
+def increment_click(code: str):
+    """Incrementa o contador de cliques para um código de link encurtador"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE short_links SET clicks = clicks + 1 WHERE short_code = ?", (code,))
+    conn.commit()
+    conn.close()
+
+def get_short_links_stats(limit=10):
+    """Retorna estatísticas dos links encurtados mais recentes"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT short_code, long_url, clicks, created_at FROM short_links ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+def get_total_clicks():
+    """Retorna o total de cliques de todos os links"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT SUM(clicks) FROM short_links")
+    res = c.fetchone()[0] or 0
+    conn.close()
+    return res
