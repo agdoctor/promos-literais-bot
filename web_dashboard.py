@@ -856,6 +856,7 @@ async def handle_index(request):
                     {{k:'shortener_domain',l:'Domínio Encurtador (ex: https://oferta.site.com)'}},
                     {{k:'fb_pixel_id',l:'Facebook Pixel ID (ex: 123456789)'}},
                     {{k:'fb_access_token',l:'Facebook Access Token (CAPI)'}},
+                    {{k:'fb_test_code',l:'Facebook Test Code (CCT-XXXXX)'}},
                     {{k:'google_analytics_id',l:'Google Analytics ID (ex: G-XXXXXXX)'}},
                     {{k:'whatsapp_enabled',l:'✅ Habilitar WhatsApp', t:'bool'}},
                     {{k:'green_api_instance_id',l:'ID Instância Green-API'}},
@@ -1340,36 +1341,48 @@ async def handle_wa_groups(request):
     except Exception as e:
         return web.json_response({"error": str(e)}, status=500)
 
-async def send_fb_capi_event(pixel_id, access_token, url, client_ip, user_agent):
+async def send_fb_capi_event(pixel_id, access_token, url, client_ip, user_agent, test_event_code=None):
     """Envia evento de PageView para o Facebook via API de Conversões (CAPI)"""
     import time
-    import hashlib
     
     endpoint = f"https://graph.facebook.com/v18.0/{pixel_id}/events"
     
-    # Hash do IP e User Agent para privacidade (opcional mas recomendado pelo FB)
-    payload = {
-        "data": [{
-            "event_name": "PageView",
-            "event_time": int(time.time()),
-            "action_source": "website",
-            "event_source_url": url,
-            "user_data": {
-                "client_ip_address": client_ip,
-                "client_user_agent": user_agent,
-            }
-        }],
-        "access_token": access_token
+    event_data = {
+        "event_name": "PageView",
+        "event_time": int(time.time()),
+        "action_source": "website",
+        "event_source_url": url,
+        "user_data": {
+            "client_ip_address": client_ip,
+            "client_user_agent": user_agent,
+        }
     }
+    
+    # Adicionar código de teste se fornecido (essencial para ver no Gerenciador de Eventos -> Testar Eventos)
+    if test_event_code:
+        event_data["opt_out"] = False
+        payload = {
+            "data": [event_data],
+            "access_token": access_token,
+            "test_event_code": test_event_code
+        }
+    else:
+        payload = {
+            "data": [event_data],
+            "access_token": access_token
+        }
     
     try:
         import aiohttp
         async with aiohttp.ClientSession() as session:
             async with session.post(endpoint, json=payload) as resp:
-                # print(f"CAPI Response: {resp.status}")
-                pass
+                resp_text = await resp.text()
+                if resp.status != 200:
+                    print(f"❌ Erro CAPI (Status {resp.status}): {resp_text}")
+                else:
+                    print(f"✅ CAPI Success: {resp_text}")
     except Exception as e:
-        print(f"Erro CAPI: {e}")
+        print(f"❌ Erro fatal CAPI: {e}")
 
 async def handle_short_link_redirect(request):
     code = request.match_info.get('code')
@@ -1389,12 +1402,16 @@ async def handle_short_link_redirect(request):
             if fb_pixel and fb_token:
                 # Pega IP real (considerando proxy)
                 client_ip = request.headers.get('X-Forwarded-For', request.remote)
+                if client_ip and ',' in client_ip:
+                    client_ip = client_ip.split(',')[0].strip()
+                
                 user_agent = request.headers.get('User-Agent', '')
                 current_url = str(request.url)
+                fb_test_code = get_config("fb_test_code")
                 
                 # Dispara tarefa em background para não atrasar o redirecionamento
                 import asyncio
-                asyncio.create_task(send_fb_capi_event(fb_pixel, fb_token, current_url, client_ip, user_agent))
+                asyncio.create_task(send_fb_capi_event(fb_pixel, fb_token, current_url, client_ip, user_agent, fb_test_code))
 
             # Se chegamos aqui, ou só tem Pixel comum (sem token) ou tem GA
             # Em ambos os casos, precisamos da página de ponte
@@ -1417,13 +1434,8 @@ async def handle_short_link_redirect(request):
                 if os.path.exists(lottie_path):
                     with open(lottie_path, "r", encoding="utf-8") as f:
                         lottie_json = f.read()
-                else:
-                    print(f"Lottie file not found at: {lottie_path}")
             except Exception as e:
                 print(f"Erro ao carregar lottie: {e}")
-
-            # Debug note para o HTML
-            debug_info = f"<!-- Lottie loaded: {'Yes' if lottie_json != '{}' else 'No'} -->"
 
             html_bridge = f"""
             <!DOCTYPE html>
@@ -1432,7 +1444,6 @@ async def handle_short_link_redirect(request):
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Carregando oferta...</title>
-                {debug_info}
                 
                 <!-- Google Analytics -->
                 {f'''
