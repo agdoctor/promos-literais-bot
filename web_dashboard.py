@@ -476,13 +476,17 @@ async def handle_index(request):
                         </div>
                         <div id="store-ml" style="padding: 16px; display:none; background: var(--bg-sec);">
                             <p style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">Use o cookie de afiliado gerado pelo painel do ML para permitir a conversão de links via Stripe API.</p>
+                             <label style="font-size:12px; font-weight:bold;">Tag do Afiliado:</label>
+                             <div style="margin-bottom:14px">
+                                 <input id="aff-ML_AFFILIATE_TAG" type="text" placeholder="ex: promosliterais" style="width:100%">
+                             </div>
                             <label style="font-size:12px; font-weight:bold;">Cookie de Afiliado ML:</label>
                             <div class="secret-row" style="margin-bottom:14px">
                                 <input id="aff-ML_AFFILIATE_COOKIE" type="password" placeholder="Cole aqui o valor do cookie">
                                 <button type="button" onclick="toggleAffVis('ML_AFFILIATE_COOKIE')" title="Mostrar/Ocultar">👁</button>
                                 <button type="button" onclick="copyAff('ML_AFFILIATE_COOKIE')" title="Copiar">📋</button>
                             </div>
-                            <button class="primary" onclick="saveAfiliado(['ML_AFFILIATE_COOKIE'])" style="width:100%">💾 Salvar Mercado Livre</button>
+                            <button class="primary" onclick="saveAfiliado(['ML_AFFILIATE_TAG','ML_AFFILIATE_COOKIE'])" style="width:100%">💾 Salvar Mercado Livre</button>
                         </div>
                     </div>
 
@@ -1014,7 +1018,7 @@ async def handle_index(request):
             }}
             async function loadAfiliados() {{
                 const keys = ['SHOPEE_APP_ID', 'SHOPEE_APP_SECRET', 'SHOPEE_AFFILIATE_ID', 'SHOPEE_SOURCE_ID',
-                              'ML_AFFILIATE_COOKIE', 'ALI_APP_KEY', 'ALI_APP_SECRET', 'ALI_TRACKING_ID', 'AMAZON_TAG'];
+                              'ML_AFFILIATE_TAG', 'ML_AFFILIATE_COOKIE', 'ALI_APP_KEY', 'ALI_APP_SECRET', 'ALI_TRACKING_ID', 'AMAZON_TAG'];
                 for (const k of keys) {{
                     try {{
                         const v = await api('settings?key=' + k);
