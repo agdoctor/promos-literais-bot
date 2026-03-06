@@ -89,6 +89,19 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
             if "t.me/promosliterais" in original_url.lower():
                 continue
 
+            # Skip se já for nosso próprio link encurtado para evitar loop/duplicação ao postar (ex: ao usar "Reescrever")
+            import database
+            short_domain = database.get_config("shortener_domain")
+            if short_domain:
+                sh_dom_clean = short_domain.strip().replace('\n', '').replace('\r', '').replace('\t', '').replace('https://', '').replace('http://', '')
+                if sh_dom_clean and sh_dom_clean in original_url:
+                    print(f"🔗 Link já é do nosso encurtador, pulando re-processamento: {original_url}")
+                    placeholder = f"[LINK_{curr_placeholder_idx}]"
+                    curr_placeholder_idx += 1
+                    clean_text = clean_text.replace(original_url, placeholder)
+                    placeholder_map[placeholder] = original_url
+                    continue
+
             placeholder = f"[LINK_{curr_placeholder_idx}]"
             curr_placeholder_idx += 1
 

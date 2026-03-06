@@ -1463,7 +1463,9 @@ async def handle_post_offer(request):
         if not text_base: return web.json_response({"error": "Text missing"}, status=400)
 
         # Processar links se necessário (garantir botões)
-        if "[LINK_" not in text_base and "Pegar promoção" not in text_base:
+        from links import extract_urls
+        urls_in_text = extract_urls(text_base)
+        if "[LINK_" not in text_base and "Pegar promoção" not in text_base and not urls_in_text:
              text_base += "\n\n[LINK_0]"
 
         clean_text, placeholder_map = await process_and_replace_links(text_base, orig_url)
@@ -1581,11 +1583,23 @@ async def handle_rewrite_tg(request):
         text = data.get("text")
         link_orig = data.get("link_original")
         
+                
         from links import process_and_replace_links
         from rewriter import reescrever_promocao
         
-        texto_com_nossos_links, _ = await process_and_replace_links(text)
+        texto_com_nossos_links, placeholder_map = await process_and_replace_links(text)
         texto_reescrito = await reescrever_promocao(texto_com_nossos_links)
+        
+        # O rewriter devolve o texto com os [LINK_X] preservados.
+        # Precisamos colocar os links curtos reais de volta no texto
+        # para que o frontend/usuário veja os links na caixa de edição
+        # e o handle_post_offer identifique-os como links na url final.
+        if placeholder_map:
+            for placeholder, final_url in placeholder_map.items():
+                if final_url:
+                    texto_reescrito = texto_reescrito.replace(placeholder, final_url)
+                else:
+                    texto_reescrito = texto_reescrito.replace(placeholder, "")
         
         return web.json_response({"text": texto_reescrito})
     except Exception as e:
