@@ -1161,9 +1161,10 @@ async def handle_logs_api(request):
 
 async def handle_watermark_get(request):
     if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
-    if not os.path.exists("watermark.png"):
+    path = "active_watermark.png" if os.path.exists("active_watermark.png") else "watermark.png"
+    if not os.path.exists(path):
         return web.Response(status=404, text="Arquivo não encontrado")
-    return web.FileResponse("watermark.png")
+    return web.FileResponse(path)
 
 async def handle_image_get(request):
     if not await check_token(request): return web.json_response({"error": "Unauthorized"}, status=403)
@@ -1190,10 +1191,11 @@ async def handle_watermark_post(request):
     if not file: return web.json_response({"error": "No file uploaded"}, status=400)
     
     content = file.file.read()
-    with open("watermark.png", "wb") as f:
+    # Salvar como active_watermark.png (ignorado pelo git) para persistir entre restarts no Square Cloud
+    with open("active_watermark.png", "wb") as f:
         f.write(content)
         
-    print(f"🖼️ Nova moldura recebida via Mini App: {len(content)} bytes")
+    print(f"🖼️ Nova moldura salva como active_watermark.png: {len(content)} bytes")
     return web.json_response({"success": True, "size": len(content)})
 
 async def handle_scrape(request):

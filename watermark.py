@@ -1,12 +1,19 @@
 import os
 from PIL import Image, ImageOps
 
-def apply_watermark(base_image_path: str, watermark_path: str = "watermark.png") -> str:
+def apply_watermark(base_image_path: str, watermark_path: str = None) -> str:
     """
     Applies a watermark frame to the base image.
     The script will center the product photo inside a white canvas matching the frame size,
     and overlay the frame on top.
     """
+    if watermark_path is None:
+        # Priorizar active_watermark.png (usuário) sobre watermark.png (default/git)
+        if os.path.exists("active_watermark.png"):
+            watermark_path = "active_watermark.png"
+        else:
+            watermark_path = "watermark.png"
+
     # Garante que o caminho do watermark seja absoluto
     if not os.path.isabs(watermark_path):
         watermark_path = os.path.join(os.getcwd(), watermark_path)
