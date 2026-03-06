@@ -58,6 +58,7 @@ async def handle_index(request):
             ::-webkit-scrollbar-track {{ background: var(--bg-main); }}
             ::-webkit-scrollbar-thumb {{ background: var(--accent); border-radius: 10px; border: 2px solid var(--bg-main); }}
             ::-webkit-scrollbar-thumb:hover {{ background: #ff85b6; }}
+            body {{ border: 5px solid #ff66a3; min-height: 100vh; box-sizing: border-box; }}
             .nav-item {{
                 padding: 14px 18px; color: var(--text-dim); cursor: pointer; white-space: nowrap;
                 font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
