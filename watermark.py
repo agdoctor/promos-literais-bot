@@ -56,6 +56,7 @@ def apply_watermark(base_image_path: str, watermark_path: str = "watermark.png")
             canvas.paste(base_img, (pos_x, pos_y))
         
         # Cola a Moldura (Frame transparente) por cima de tudo
+        print(f"🎨 Aplicando moldura de {frame.size} sobre imagem de {base_img.size}")
         canvas.paste(frame, (0, 0), frame)
         
         new_path = base_image_path.rsplit('.', 1)[0] + "_wm.png"
