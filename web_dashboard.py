@@ -1444,6 +1444,10 @@ async def handle_short_link_redirect(request):
             except Exception as e:
                 print(f"Erro ao carregar lottie: {e}")
 
+            # Extrair domínio para rastreio consistente no navegador
+            from urllib.parse import urlparse
+            domain = urlparse(str(request.url)).netloc
+
             html_bridge = f"""
             <!DOCTYPE html>
             <html>
@@ -1459,7 +1463,9 @@ async def handle_short_link_redirect(request):
                   window.dataLayer = window.dataLayer || [];
                   function gtag(){{dataLayer.push(arguments);}}
                   gtag('js', new Date());
-                  gtag('config', '{ga_id}');
+                  gtag('config', '{ga_id}', {{
+                    'domain_name': '{domain}'
+                  }});
                 </script>
                 ''' if ga_id else ""}
 
@@ -1475,7 +1481,9 @@ async def handle_short_link_redirect(request):
                   s.parentNode.insertBefore(t,s)}}(window, document,'script',
                   'https://connect.facebook.net/en_US/fbevents.js');
                   fbq('init', '{fb_pixel}');
-                  fbq('track', 'PageView');
+                  fbq('track', 'PageView', {{
+                    domain_name: '{domain}'
+                  }});
                 </script>
                 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={fb_pixel}&ev=PageView&noscript=1"/></noscript>
                 ''' if fb_pixel else ""}
