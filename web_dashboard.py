@@ -1698,8 +1698,11 @@ async def handle_short_link_redirect(request):
 
             # Se chegamos aqui, ou só tem Pixel comum (sem token) ou tem GA
             # Em ambos os casos, precisamos da página de ponte
-            # FORÇAR PONTE para o novo domínio para teste do usuário
-            should_show_bridge = (fb_pixel or ga_id or "literalmente" in str(request.url))
+            # FORÇAR PONTE apenas se precisarmos de tracking no navegador client-side
+            needs_fb_browser = bool(fb_pixel and not fb_token)
+            needs_ga = bool(ga_id)
+            
+            should_show_bridge = needs_fb_browser or needs_ga
             
             if not should_show_bridge:
                 raise web.HTTPFound(location=long_url)
