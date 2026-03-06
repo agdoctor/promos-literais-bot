@@ -1347,6 +1347,10 @@ async def send_fb_capi_event(pixel_id, access_token, url, client_ip, user_agent,
     
     endpoint = f"https://graph.facebook.com/v18.0/{pixel_id}/events"
     
+    # Extrair domínio do URL para facilitar a filtragem no Facebook
+    from urllib.parse import urlparse
+    domain = urlparse(url).netloc
+    
     event_data = {
         "event_name": "PageView",
         "event_time": int(time.time()),
@@ -1355,6 +1359,9 @@ async def send_fb_capi_event(pixel_id, access_token, url, client_ip, user_agent,
         "user_data": {
             "client_ip_address": client_ip,
             "client_user_agent": user_agent,
+        },
+        "custom_data": {
+            "domain_name": domain
         }
     }
     
