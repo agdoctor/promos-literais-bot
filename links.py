@@ -109,7 +109,7 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
 
             # 3. Se houver domínio encurtador configurado, substituir pelo link curto
             import database
-            short_domain = database.get_config("shortener_domain").strip()
+            short_domain = database.get_config("shortener_domain").strip().replace('\n', '').replace('\r', '').replace('\t', '')
             if short_domain:
                 if not short_domain.startswith("http"):
                     short_domain = "https://" + short_domain

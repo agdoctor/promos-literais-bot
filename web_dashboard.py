@@ -1498,7 +1498,7 @@ async def handle_post_offer(request):
             if placeholder_map:
                 # O process_and_replace_links usa create_short_link que retorna o código
                 # Vamos tentar pegar o código do primeiro link resolvido que aponte para o nosso encurtador
-                short_domain = get_config("short_domain") or request.host
+                short_domain = get_config("shortener_domain") or request.host
                 for final_url in placeholder_map.values():
                     if short_domain in final_url:
                         short_code = final_url.split('/')[-1]

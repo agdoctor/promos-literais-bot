@@ -25,20 +25,20 @@ def format_whatsapp_text(html_text: str) -> str:
 
     # Links: <a href="url">label</a> -> Formato "Botão Visual" para WhatsApp
     def link_repl(match):
-        url = match.group(1).strip()
+        url = match.group(1).strip().replace('\n', '').replace('\r', '').replace('\t', '')
         label = match.group(2).strip()
         generics = ["pegar promoção", "clique aqui", "comprar", "link", "aproveite", "ir para a loja", "oferta", "ver mais", "pegar", "quero", "eu quero", "resgatar"]
         
         # Se for um link genérico/CTA, formatamos como "Botão Visual" destacado com emojis
         if label.lower() in generics or not label:
-            return f"\n\n*🛍️ PEGAR PROMOÇÃO:*\n{url}"
+            return f"\n\n*🛍️ PEGAR PROMOÇÃO:* {url}"
         
         # Se for um link informativo (ex: Cupom ou Canal), mantemos mais discreto/inline
         if len(label) < 15 or "t.me/" in url.lower():
             return f" *{label.upper()}*: {url} "
             
         # Para outros links (ex: títulos), usamos um formato de destaque simples
-        return f"\n\n*👉 {label.upper()}:*\n{url}"
+        return f"\n\n*👉 {label.upper()}:* {url}"
 
     # Regex robusta para links (suporta aspas simples e duplas)
     text = re.sub(r'<a\s+.*?href=["\'](.*?)["\'].*?>(.*?)</a>', link_repl, text, flags=re.DOTALL | re.IGNORECASE)
