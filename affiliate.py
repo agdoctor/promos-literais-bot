@@ -49,12 +49,19 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
         return original_url
 
     # Obter a tag de afiliado do banco ou tentar extrair do cookie (orgnickp)
-    ml_tag = get_config("ML_AFFILIATE_TAG")
-    if not ml_tag:
-        import re as _re_tag
-        tag_match = _re_tag.search(r'orgnickp=([^;]+)', ml_cookie)
-        ml_tag = tag_match.group(1).strip().lower() if tag_match else 'promosliterais'
-    print(f"[ML] Usando tag de afiliado: {ml_tag}")
+    ml_tag_db = get_config("ML_AFFILIATE_TAG")
+    
+    # Extrair do cookie (orgnickp é o valor que a API do ML espera)
+    import re as _re_tag
+    cookie_tag_match = _re_tag.search(r'orgnickp=([^;]+)', ml_cookie)
+    cookie_tag = cookie_tag_match.group(1).strip().upper() if cookie_tag_match else None
+    
+    # A tag para a API DEVE ser a do cookie se disponível
+    ml_tag_api = cookie_tag or ml_tag_db or 'promosliterais'
+    # A tag para o fallback social pode ser a do dashboard (slug da vitrine)
+    ml_tag_social = ml_tag_db or cookie_tag or 'promosliterais'
+    
+    print(f"[ML] API Tag: {ml_tag_api} | Social Slug: {ml_tag_social}")
 
     parsed = urlparse(original_url)
     target_product_url = original_url
@@ -107,7 +114,7 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
     clean_url = clean_tracking_params(target_product_url)
 
     # Se a API falhar, o fallback  passar a URL original inteira (ou limpa) no ref do nosso link social genrico
-    fallback_social_url = f"https://www.mercadolivre.com.br/social/{ml_tag}?forceInApp=true&matt_word={ml_tag}&ref={clean_url}"
+    fallback_social_url = f"https://www.mercadolivre.com.br/social/{ml_tag_social}?forceInApp=true&matt_word={ml_tag_social}&ref={clean_url}"
 
     try:
         print(f"Convertendo ML via API Stripe: {clean_url}")
@@ -134,7 +141,7 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
             # Recebe URLs em lista e retorna short_url por item
             body = {
                 'urls': [clean_url],
-                'tag': ml_tag
+                'tag': ml_tag_api
             }
             
             response = await api_client.post(
@@ -150,11 +157,17 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
 
             if response.status_code != 200:
                 print(f"[ERR] Erro na API do ML ({response.status_code}): {response.text}")
+                # Se for 401/403, o cookie certamente expirou
                 return fallback_social_url
 
             data = response.json()
             # Novo endpoint retorna lista de objetos: [{"url": "...", "short_url": "...", ...}]
             if isinstance(data, list) and len(data) > 0:
+                # Se a API retornou erro no objeto (mesmo sendo 200)
+                if data[0].get('error'):
+                    print(f"[ERR] API do ML reportou erro no item: {data[0].get('error')}")
+                    return fallback_social_url
+                
                 short_url = data[0].get('short_url') or data[0].get('url')
                 if short_url: return short_url
             elif isinstance(data, dict):
@@ -164,6 +177,8 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
             return fallback_social_url
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"[!] Erro ao gerar link de afiliado ML: {e}")
         return fallback_social_url
 
