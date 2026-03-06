@@ -96,11 +96,17 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
         except Exception as e:
             print(f"[!] Erro ao acessar vitrine social: {e}")
 
+    # Expandir URL caso seja encurtada (ex: mercadolivre.com/sec/...)
+    if 'mercadolivre.com/sec/' in target_product_url or 'meli.la/' in target_product_url:
+        print(f"[ML] Expandindo URL curta: {target_product_url}")
+        from links import expand_url
+        target_product_url = await expand_url(target_product_url)
+
     # Limpar a URL do produto antes de enviar para a API
     clean_url = clean_tracking_params(target_product_url)
 
     # Se a API falhar, o fallback  passar a URL original inteira (ou limpa) no ref do nosso link social genrico
-    fallback_social_url = f"https://www.mercadolivre.com.br/social/{ml_tag}?forceInApp=true&matt_word=drmk&ref={clean_url}"
+    fallback_social_url = f"https://www.mercadolivre.com.br/social/{ml_tag}?forceInApp=true&matt_word={ml_tag}&ref={clean_url}"
 
     try:
         print(f"Convertendo ML via API Stripe: {clean_url}")
