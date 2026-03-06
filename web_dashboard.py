@@ -1404,15 +1404,26 @@ async def handle_short_link_redirect(request):
             if not should_show_bridge:
                 raise web.HTTPFound(location=long_url)
             
-            # Se houver tracking que exige navegador (Pixel JS ou GA), envia página de ponte
+            # Tentar carregar a animação Lottie de forma robusta
             lottie_json = "{}"
+            lottie_file = "wired-gradient-112-book-hover-closed.json"
             try:
-                lottie_path = os.path.join(os.path.dirname(__file__), "wired-gradient-112-book-hover-closed.json")
+                # Caminho absoluto baseado no arquivo atual
+                lottie_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), lottie_file)
+                if not os.path.exists(lottie_path):
+                    # Fallback para o CWD
+                    lottie_path = os.path.join(os.getcwd(), lottie_file)
+                
                 if os.path.exists(lottie_path):
                     with open(lottie_path, "r", encoding="utf-8") as f:
                         lottie_json = f.read()
+                else:
+                    print(f"Lottie file not found at: {lottie_path}")
             except Exception as e:
                 print(f"Erro ao carregar lottie: {e}")
+
+            # Debug note para o HTML
+            debug_info = f"<!-- Lottie loaded: {'Yes' if lottie_json != '{}' else 'No'} -->"
 
             html_bridge = f"""
             <!DOCTYPE html>
@@ -1421,6 +1432,7 @@ async def handle_short_link_redirect(request):
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Carregando oferta...</title>
+                {debug_info}
                 
                 <!-- Google Analytics -->
                 {f'''
