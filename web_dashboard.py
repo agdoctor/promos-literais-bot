@@ -1395,11 +1395,6 @@ async def handle_short_link_redirect(request):
                 # Dispara tarefa em background para não atrasar o redirecionamento
                 import asyncio
                 asyncio.create_task(send_fb_capi_event(fb_pixel, fb_token, current_url, client_ip, user_agent))
-                
-                # Se NÃO houver Google Analytics (que exige página de ponte), 
-                # podemos fazer o redirect 301 instantâneo agora!
-                if not ga_id:
-                    raise web.HTTPFound(location=long_url)
 
             # Se chegamos aqui, ou só tem Pixel comum (sem token) ou tem GA
             # Em ambos os casos, precisamos da página de ponte
@@ -1426,7 +1421,7 @@ async def handle_short_link_redirect(request):
                 </script>
                 ''' if ga_id else ""}
 
-                <!-- Facebook Pixel (Apenas se não carregou via CAPI ou para redundância) -->
+                <!-- Facebook Pixel -->
                 {f'''
                 <script>
                   !function(f,b,e,v,n,t,s)
@@ -1441,7 +1436,7 @@ async def handle_short_link_redirect(request):
                   fbq('track', 'PageView');
                 </script>
                 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={fb_pixel}&ev=PageView&noscript=1"/></noscript>
-                ''' if (fb_pixel and not fb_token) else ""}
+                ''' if fb_pixel else ""}
 
                 <style>
                     body {{ font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #1c0e15; color: white; }}
@@ -1449,7 +1444,7 @@ async def handle_short_link_redirect(request):
                     @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
                     .container {{ text-align: center; }}
                 </style>
-                <meta http-equiv="refresh" content="{"0" if (fb_pixel and fb_token and ga_id) else "2"};url={long_url}">
+                <meta http-equiv="refresh" content="2;url={long_url}">
             </head>
             <body>
                 <div class="container">
@@ -1459,7 +1454,7 @@ async def handle_short_link_redirect(request):
                 </div>
                 <script>
                     // Backup redirect via JS
-                    setTimeout(function() {{ window.location.href = "{long_url}"; }}, {500 if (fb_pixel and fb_token and ga_id) else 2500});
+                    setTimeout(function() {{ window.location.href = "{long_url}"; }}, 2500);
                 </script>
             </body>
             </html>
