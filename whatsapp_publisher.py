@@ -27,8 +27,9 @@ def format_whatsapp_text(html_text: str) -> str:
     def link_repl(match):
         url = match.group(1).strip().replace('\n', '').replace('\r', '').replace('\t', '')
         
-        # Otimização Visual para WhatsApp: Remover https:// para evitar quebras de linha em telas estreitas
-        display_url = re.sub(r'^https?://', '', url)
+        # Manter o protocolo https:// para garantir que navegadores (Opera) e WhatsApp Web
+        # reconheçam o texto como um link clicável.
+        display_url = url
 
         label = match.group(2).strip()
         generics = ["pegar promoção", "clique aqui", "comprar", "link", "aproveite", "ir para a loja", "oferta", "ver mais", "pegar", "quero", "eu quero", "resgatar"]
