@@ -1,0 +1,43 @@
+
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Carregando oferta...</title>
+                
+                <!-- Google Analytics -->
+                
+                <script async src="https://www.googletagmanager.com/gtag/js?id=GA_ID"></script>
+                <script>
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', 'GA_ID');
+                </script>
+                
+
+                <!-- Facebook Pixel -->
+                
+
+                <style>
+                    body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #1c0e15; color: white; }
+                    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #ff66a3; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin-bottom: 20px; }
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    .container { text-align: center; }
+                </style>
+                <meta http-equiv="refresh" content='0;url=https://loja.com/produto'>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="loader"></div>
+                    <p>Redirecionando para a oferta...</p>
+                    <small style="opacity: 0.5">Clique <a href="https://loja.com/produto" style="color: #ff66a3">aqui</a> se não for redirecionado.</small>
+                </div>
+                <script>
+                    // Backup redirect via JS
+                    setTimeout(function() { window.location.href = "https://loja.com/produto"; }, 500);
+                </script>
+            </body>
+            </html>
+            
