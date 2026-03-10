@@ -5,11 +5,10 @@ import sys
 # Adicionar o diretório atual ao sys.path para importar os módulos locais
 sys.path.append(os.getcwd())
 
-from links import process_and_replace_links, extract_urls
-from affiliate import is_store_link
+from links import process_and_replace_links, extract_urls, is_store_link
 
 async def test_filtering():
-    print("--- [TEST] Iniciando Testes de Filtragem de Links ---")
+    print("--- [TEST] Iniciando Testes de Filtragem por WHITELIST ---")
     
     # Mocking external calls
     import affiliate
@@ -29,79 +28,69 @@ async def test_filtering():
         return ""
     database.get_config = mock_get_config
 
-    # Caso 1: Post com diversos links (Loja, Rede Social, Concorrente)
+    # Caso 1: Mix de links permitidos e proibidos
     text = """
-🚨 NOVO CUPOM NA AMAZON
+🚨 OFERTA IMPERDÍVEL
 
-R$100 OFF em compras acima de R$99 
-🏷 CUPOMZAO
+➡️ https://amzn.to/4rLTnlH (LOJA - PERMITIDO)
+➡️ https://www.mercadolivre.com.br/p/MLB123 (LOJA - PERMITIDO)
 
-➡️ https://amzn.to/4rLTnlH (LOJA - DEVE MANTER)
-➡️ https://amzn.to/4rLTnlH (LOJA - DEVE MANTER)
+⚠️ Cupom exclusivo:
+🏷 CUPOMZAO (t.me/promosliterais - PERMITIDO INTERNO)
 
-⚠️ exclusivo no app
-
-#parceria 
-https://bit.ly/comprawpp (CONCORRENTE/WHATSAPP - DEVE REMOVER)
-https://t.me/compretudocomdesconto (TELEGRAM - DEVE REMOVER)
+Redes sociais (DEVE REMOVER):
+- https://instagram.com/perfil
+- https://bit.ly/concorrente (Redireciona para WhatsApp - DEVE REMOVER)
+- https://fala-luiz.com.br (Blacklist Concorrente - DEVE REMOVER)
 """
     
-    print("\n1. Testando processamento de post misto...")
+    print("\n1. Testando processamento com Whitelist...")
     
-    urls_extraidas = extract_urls(text)
-    print(f"URLs extraídas: {urls_extraidas}")
+    # Simular expansão para o bit.ly
+    from links import expand_url
+    original_expand = expand_url
     
-    # Verificação básica de extração
-    assert any("amzn.to" in u for u in urls_extraidas)
-    assert any("bit.ly" in u for u in urls_extraidas)
+    async def mock_expand(url):
+        if "bit.ly" in url:
+            return "https://chat.whatsapp.com/concorrente"
+        return url
+    
+    # Aplicar mock de expansão (Monkey patching local import if possible or just rely on the logic)
+    import links
+    links.expand_url = mock_expand
     
     clean_text, p_map = await process_and_replace_links(text)
     
     print(f"Texto Processado:\n{clean_text}")
     print(f"Mapa de Placeholders: {p_map}")
     
-    # Verificar se links da Amazon foram mantidos (pelo menos no placeholder)
-    amazon_placeholders = [p for p, url in p_map.items() if url and ("amazon" in url or "amzn.to" in url)]
-    print(f"Links Amazon encontrados no mapa: {len(amazon_placeholders)}")
-    assert len(amazon_placeholders) > 0, "Deveria ter mantido links da Amazon"
+    # Verificar permitidos
+    allowed = [url for url in p_map.values() if url is not None]
+    print(f"Links permitidos: {allowed}")
     
-    # Verificar se links de Telegram/Bitly concorrente foram marcados como None ou removidos
-    # bit.ly e t.me estão na blacklist
-    blocked_placeholders = [p for p, url in p_map.items() if url is None]
-    print(f"Links Bloqueados (None no mapa): {len(blocked_placeholders)}")
-    assert len(blocked_placeholders) >= 2, "Deveria ter bloqueado os links da blacklist (bit.ly e t.me)"
+    assert any("amazon" in str(u) or "amzn.to" in str(u) for u in allowed), "Amazon deveria constar"
+    assert any("mercadolivre" in str(u) for u in allowed), "Mercado Livre deveria constar"
     
+    # Verificar bloqueados
+    blocked_count = list(p_map.values()).count(None)
+    print(f"Links bloqueados (None no mapa): {blocked_count}")
+    assert blocked_count >= 3, "Deveria ter bloqueado Instagram, bit.ly(WhatsApp) e fala-luiz"
+
     # Caso 2: Testar is_store_link individualmente
-    print("\n2. Testando is_store_link...")
+    print("\n2. Testando is_store_link individualmente...")
     assert is_store_link("https://www.amazon.com.br/dp/123") == True
     assert is_store_link("https://shopee.com.br/product/1/2") == True
-    assert is_store_link("https://www.mercadolivre.com.br/p/MLB123") == True
-    assert is_store_link("https://chat.whatsapp.com/ABC") == False
-    assert is_store_link("https://t.me/canal") == False
-    assert is_store_link("https://instagram.com/perfil") == False
+    assert is_store_link("https://mglu.io/xyz") == True
+    assert is_store_link("https://facebook.com/xyz") == False
+    assert is_store_link("https://google.com") == False
     print("✅ is_store_link validado!")
 
-    # Caso 3: Verificar se o monitor.py filtraria corretamente (simulação da lógica)
-    print("\n3. Simulando lógica do monitor.py...")
-    social_domains = ["youtube.com", "youtu.be", "t.me", "chat.whatsapp.com", "instagram.com", "facebook.com"]
-    
-    valid_buy_links = {}
-    for p, url in p_map.items():
-        if not url: continue
-        if any(social in url.lower() for social in social_domains): continue
-        if is_store_link(url):
-            valid_buy_links[p] = url
-            
-    print(f"Links de compra válidos: {valid_buy_links}")
-    for url in valid_buy_links.values():
-        # Validamos que apenas lojas sobraram
-        assert is_store_link(url), f"Link {url} não deveria estar nos links de compra válidos"
-    
     # Restaurar originais
     affiliate.convert_to_affiliate = original_convert
     database.get_config = original_get_config
+    links.expand_url = original_expand
     
-    print("\n✅ Todos os testes de filtragem passaram!")
+    print("\n✅ Todos os testes de WHITELIST passaram!")
 
 if __name__ == "__main__":
     asyncio.run(test_filtering())

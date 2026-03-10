@@ -10,6 +10,7 @@ import time
 import json
 from datetime import datetime
 from config import PROXY_URL
+from links import is_store_link
 
 def clean_tracking_params(url: str) -> str:
     """
@@ -686,27 +687,6 @@ async def google_shopee_fallback(shop_id, item_id):
     return None
 
 
-def is_store_link(url: str) -> bool:
-    """
-    Verifica se a URL pertence a uma das lojas suportadas pelo sistema.
-    """
-    try:
-        parsed = urlparse(url)
-        if not parsed.hostname:
-            return False
-        domain = parsed.hostname.replace('www.', '').lower()
-        
-        supported_stores = [
-            'mercadolivre.com', 'mercadolibre.com', 'meli.la',
-            'amazon.com.br', 'amazon.com', 'amzn.to',
-            'aliexpress.com', 'aliexpress.us', 'aliexpress.ru', 's.click.aliexpress',
-            'shopee.com.br', 'shopee.com', 'shope.ee', 's.shopee',
-            'magazineluiza.com.br', 'casasbahia.com.br', 'pontofrio.com.br', 'extra.com.br'
-        ]
-        
-        return any(store in domain for store in supported_stores)
-    except:
-        return False
 
 async def convert_to_affiliate(url: str) -> str:
     """
