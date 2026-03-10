@@ -584,10 +584,24 @@ async def start_monitoring():
 
             # --- FILTRO DE QUALIDADE: Validar se há links de compra reais ---
             # Remove links do tipo YouTube ou Telegram de serem considerados "compra"
-            valid_buy_links = {
-                p: url for p, url in placeholder_map.items() 
-                if url and not any(content in url.lower() for content in ["youtube.com", "youtu.be", "t.me", "chat.whatsapp.com"])
-            }
+            # E garante que apenas links de LOJAS conhecidas sejam botões de compra
+            from affiliate import is_store_link
+            
+            valid_buy_links = {}
+            for p, url in placeholder_map.items():
+                if not url:
+                    continue
+                
+                # Ignorar links de redes sociais conhecidas (mesmo se não estiverem na blacklist)
+                social_domains = ["youtube.com", "youtu.be", "t.me", "chat.whatsapp.com", "instagram.com", "facebook.com"]
+                if any(social in url.lower() for social in social_domains):
+                    continue
+                
+                # Só é link de compra se for de uma loja conhecida
+                if is_store_link(url):
+                    valid_buy_links[p] = url
+                else:
+                    print(f"ℹ️ Link ignorado por não ser de loja suportada: {url}")
             
             if not valid_buy_links:
                 print("⏭️ Ignorado: Nenhum link de COMPRA válido encontrado (Apenas links de conteúdo ou vazios).")

@@ -51,11 +51,25 @@ def extract_urls(text: str) -> list[str]:
             
     return normalized_urls
 
-# Lista de domínios proibidos (concorrentes, sites de redirecionamento de terceiros)
+# Lista de domínios proibidos (concorrentes, sites de redes sociais, sites de redirecionamento de terceiros)
 DOMAIN_BLACKLIST = [
     "nerdofertas.com",
+    "fala-luiz.com.br", # Exemplo de domínio concorrente
     "t.me", # Evita links para outros canais de telegram que não sejam o oficial
     "chat.whatsapp.com",
+    "whatsapp.com",
+    "wa.me",
+    "facebook.com",
+    "fb.com",
+    "fb.me",
+    "instagram.com",
+    "instagr.am",
+    "twitter.com",
+    "x.com",
+    "tiktok.com",
+    "linktr.ee",
+    "beacons.ai",
+    "beacons.page",
     "grupos.link"
 ]
 
@@ -108,9 +122,9 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
             curr_placeholder_idx += 1
 
             # Se chegamos aqui, é um link válido para processar
-            # MAS, se ele estiver na blacklist, substituímos pelo placeholder mas marcamos como None para ser removido depois
+            # MAS, se ele estiver na blacklist ou for um link de rede social, substituímos pelo placeholder mas marcamos como None para ser removido depois
             if any(domain in original_url.lower() for domain in DOMAIN_BLACKLIST):
-                print(f"🚫 Link bloqueado (Blacklist): {original_url}")
+                print(f"🚫 Link bloqueado (Blacklist/Social): {original_url}")
                 clean_text = clean_text.replace(original_url, placeholder)
                 placeholder_map[placeholder] = None
                 continue
@@ -122,9 +136,9 @@ async def process_and_replace_links(text: str, extra_link: str = None) -> tuple[
             # 1. Expandir URL caso seja encurtada (ex: amzn.to)
             expanded_url = await expand_url(original_url)
             
-            # Filtro após expandir (previne encurtadores que apontam para concorrentes)
+            # Filtro após expandir (previne encurtadores que apontam para concorrentes ou redes sociais)
             if any(domain in expanded_url.lower() for domain in DOMAIN_BLACKLIST):
-                print(f"🚫 Link expandido bloqueado (Blacklist): {expanded_url}")
+                print(f"🚫 Link expandido bloqueado (Blacklist/Social): {expanded_url}")
                 placeholder_map[placeholder] = None
                 continue
 
