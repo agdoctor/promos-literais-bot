@@ -25,7 +25,12 @@ def clean_tracking_params(url: str) -> str:
             'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
             'fbclid', 'gclid', 'smid', 'pf_rd_p', 'pf_rd_r', 'pd_rd_w', 'pd_rd_wg', 'pd_rd_r',
             'dchild', 'keywords', 'qid', 'sr', 'th', 'psc', 'sp_atk', 'is_from_signup',
-            'matt_tool', 'matt_word', 'product_trigger_id', 'gad_source', 'gbraid', 'gclid'
+            'matt_tool', 'matt_word', 'product_trigger_id', 'gad_source', 'gbraid', 'gclid',
+            'matt_internal_campaign_id', 'matt_source', 'matt_campaign_id', 'matt_ad_group_id',
+            'matt_match_type', 'matt_network', 'matt_device', 'matt_creative', 'matt_keyword',
+            'matt_ad_position', 'matt_ad_type', 'matt_merchant_id', 'matt_product_id',
+            'matt_product_partition_id', 'matt_target_id', 'cq_src', 'cq_cmp', 'cq_net',
+            'cq_plt', 'cq_med', 'gad_campaignid'
         ]
         
         filtered_params = {k: v for k, v in params.items() if k not in params_to_remove}
@@ -57,8 +62,10 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
     cookie_tag_match = _re_tag.search(r'orgnickp=([^;]+)', ml_cookie)
     cookie_tag = cookie_tag_match.group(1).strip().upper() if cookie_tag_match else None
     
-    # A tag para a API DEVE ser a do cookie se disponível
-    ml_tag_api = cookie_tag or ml_tag_db or 'promosliterais'
+    # A tag para a API DEVE ser a do banco se disponível (conforme instrução do usuário), 
+    # caindo para o cookie ou o default 'promosliterais'
+    ml_tag_api = ml_tag_db or cookie_tag or 'promosliterais'
+
     # A tag para o fallback social pode ser a do dashboard (slug da vitrine)
     ml_tag_social = ml_tag_db or cookie_tag or 'promosliterais'
     
@@ -73,7 +80,7 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
         print(f"[SEARCH] Link Social (Vitrine) detectado: {original_url}")
         try:
             # Reutiliza httpx para baixar a vitrine
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
             async with httpx.AsyncClient(follow_redirects=True, timeout=15.0, headers=headers) as client:
                 res = await client.get(original_url)
                 soup = BeautifulSoup(res.text, 'html.parser')
@@ -123,65 +130,78 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
         # Sanitizar o cookie: remover caracteres não-ASCII que causam erro de header no httpx
         ml_cookie_safe = ml_cookie.encode('ascii', errors='ignore').decode('ascii')
         
-        # Extrair o token CSRF do cookie pois a API do ML exige como header separado
-        import re as _re
-        csrf_match = _re.search(r'_csrf=([^;]+)', ml_cookie_safe)
-        csrf_token = csrf_match.group(1).strip() if csrf_match else ''
-        
-        async with httpx.AsyncClient(timeout=10.0) as api_client:
-            api_headers = {
-                'Content-Type': 'application/json',
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # 1. Obter CSRF Token do Link Builder (Estratégia mais robusta do Promobot)
+            headers = {
                 'Cookie': ml_cookie_safe,
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Origin': 'https://www.mercadolivre.com.br',
-                'Referer': 'https://www.mercadolivre.com.br/afiliados/linkbuilder',
-                'x-csrf-token': csrf_token,
-            }
-            # Endpoint correto descoberto analisando o Link Builder oficial do ML
-            # Recebe URLs em lista e retorna short_url por item
-            body = {
-                'urls': [clean_url],
-                'tag': ml_tag_api
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Referer': 'https://www.mercadolivre.com.br/afiliados/linkbuilder'
             }
             
-            response = await api_client.post(
+            landing = await client.get('https://www.mercadolivre.com.br/afiliados/linkbuilder', headers=headers)
+            csrf_token = ""
+            csrf_match = re.search(r'"csrfToken":"([^"]+)"', landing.text)
+            if csrf_match:
+                csrf_token = csrf_match.group(1)
+            
+            if not csrf_token:
+                print("[ML Stripe] Falha ao capturar CSRF Token via landing page")
+                # Fallback: tentar extrair do cookie como ultima tentativa
+                import re as _re_fallback
+                csrf_c_match = _re_fallback.search(r'_csrf=([^;]+)', ml_cookie_safe)
+                csrf_token = csrf_c_match.group(1).strip() if csrf_c_match else ''
+            
+            if not csrf_token:
+                print("[ML Stripe] CSRF Token ausente")
+                return fallback_social_url
+
+            # 2. Criar Link via API v2
+            headers['x-csrf-token'] = csrf_token
+            headers['Content-Type'] = 'application/json'
+            headers['Accept'] = 'application/json'
+            
+            payload = {
+                "urls": [clean_url],
+                "tag": ml_tag_api
+            }
+            
+            response = await client.post(
                 'https://www.mercadolivre.com.br/affiliate-program/api/v2/affiliates/createLink',
-                headers=api_headers,
-                json=body,
-                follow_redirects=False
+                headers=headers,
+                json=payload
             )
-
-            if response.status_code >= 300 and response.status_code < 400:
-                print(f"[ERR] API do ML redirecionou (provavelmente cookie expirado): {response.headers.get('location')}")
-                return fallback_social_url
-
-            if response.status_code != 200:
-                print(f"[ERR] Erro na API do ML ({response.status_code}): {response.text}")
-                # Se for 401/403, o cookie certamente expirou
-                return fallback_social_url
-
-            data = response.json()
-            # Novo endpoint retorna lista de objetos: [{"url": "...", "short_url": "...", ...}]
-            if isinstance(data, list) and len(data) > 0:
-                # Se a API retornou erro no objeto (mesmo sendo 200)
-                if data[0].get('error'):
-                    print(f"[ERR] API do ML reportou erro no item: {data[0].get('error')}")
-                    return fallback_social_url
+            
+            if response.status_code == 200:
+                data = response.json()
                 
-                short_url = data[0].get('short_url') or data[0].get('url')
-                if short_url: return short_url
-            elif isinstance(data, dict):
-                short_url = data.get('short_url') or data.get('url')
-                if short_url: return short_url
-
+                if isinstance(data, list) and len(data) > 0:
+                    item = data[0]
+                    short_url = item.get('short_url') or item.get('url')
+                    if short_url: return short_url
+                elif isinstance(data, dict):
+                    # For dict response, it might be {"status": 200, "urls": [...]}
+                    urls_list = data.get('urls', [])
+                    if urls_list and isinstance(urls_list, list) and len(urls_list) > 0:
+                        item = urls_list[0]
+                        short_url = item.get('short_url') or item.get('url')
+                        if short_url: return short_url
+                    
+                    short_url = data.get('short_url') or data.get('url')
+                    if short_url: return short_url
+            
+            print(f"[ML Stripe] API falhou ({response.status_code})")
             return fallback_social_url
+
+
+
+
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        print(f"[!] Erro ao gerar link de afiliado ML: {e}")
+        print(f"[!] Erro ao gerar link de afiliado ML (stripe): {e}")
         return fallback_social_url
+
 
 async def convert_aliexpress_to_affiliate(original_url: str) -> str:
     """
