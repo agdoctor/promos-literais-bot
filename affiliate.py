@@ -14,13 +14,9 @@ from links import is_store_link
 
 def clean_tracking_params(url: str) -> str:
     """
-    Remove parmetros de rastreamento conhecidos para evitar conflitos e links sujos.
+    Remove parmetros de rastreamento de uma URL usando Regex para evitar corrupo de path.
     """
     try:
-        parsed = urlparse(url)
-        params = parse_qs(parsed.query)
-        
-        # Lista de parmetros para remover
         params_to_remove = [
             'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
             'fbclid', 'gclid', 'smid', 'pf_rd_p', 'pf_rd_r', 'pd_rd_w', 'pd_rd_wg', 'pd_rd_r',
@@ -33,11 +29,16 @@ def clean_tracking_params(url: str) -> str:
             'cq_plt', 'cq_med', 'gad_campaignid'
         ]
         
-        filtered_params = {k: v for k, v in params.items() if k not in params_to_remove}
-        
-        # Recompor a URL
-        new_query = urlencode(filtered_params, doseq=True)
-        return urlunparse(parsed._replace(query=new_query))
+        clean_url = url
+        for p in params_to_remove:
+            # Remove parmetro se for o primeiro (?p=...) seguido por outro
+            clean_url = re.sub(fr'\?{p}=[^&]*&', '?', clean_url)
+            # Remove parmetro se for o primeiro (?p=...) e nico
+            clean_url = re.sub(fr'\?{p}=[^&]*$', '', clean_url)
+            # Remove parmetro se no for o primeiro (&p=...)
+            clean_url = re.sub(fr'&{p}=[^&]*', '', clean_url)
+            
+        return clean_url
     except Exception as e:
         print(f"[!] Erro ao limpar parametros: {e}")
         return url
@@ -94,6 +95,10 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
                     raw_link = match_list.group(1)
                     # O JSON escapa as barras como \u002F ou \/
                     target_product_url = raw_link.replace('\\u002F', '/').replace('\\/', '/')
+                    if target_product_url.startswith('//'):
+                        target_product_url = 'https:' + target_product_url
+                    elif target_product_url.startswith('/') and not target_product_url.startswith('//'):
+                        target_product_url = 'https://www.mercadolivre.com.br' + target_product_url
                     print(f"[OK] Lista curada extraida da vitrine: {target_product_url}")
                 else:
                     # 2. Se no for lista, tentar achar o produto em destaque usual
@@ -105,6 +110,10 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
                         
                     if featured_link and featured_link.get("href"):
                         target_product_url = featured_link['href']
+                        if target_product_url.startswith('//'):
+                            target_product_url = 'https:' + target_product_url
+                        elif target_product_url.startswith('/') and not target_product_url.startswith('//'):
+                            target_product_url = 'https://www.mercadolivre.com.br' + target_product_url
                         print(f"Produto extraido da vitrine: {target_product_url}")
                     else:
                         print(f"[ERR] Nao foi possivel encontrar o produto destacado ou lista na vitrine.")
@@ -121,8 +130,10 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
     # Limpar a URL do produto antes de enviar para a API
     clean_url = clean_tracking_params(target_product_url)
 
-    # Se a API falhar, o fallback  passar a URL original inteira (ou limpa) no ref do nosso link social genrico
-    fallback_social_url = f"https://www.mercadolivre.com.br/social/{ml_tag_social}?forceInApp=true&matt_word={ml_tag_social}&ref={clean_url}"
+    # Se a API falhar, o fallback é passar a URL original inteira (ou limpa) no ref do nosso link social genérico
+    import urllib.parse
+    encoded_ref = urllib.parse.quote(clean_url, safe='')
+    fallback_social_url = f"https://www.mercadolivre.com.br/social/{ml_tag_social}?forceInApp=true&matt_word={ml_tag_social}&ref={encoded_ref}"
 
     try:
         print(f"Convertendo ML via API Stripe: {clean_url}")
@@ -171,25 +182,34 @@ async def convert_ml_to_affiliate(original_url: str) -> str:
                 json=payload
             )
             
+            print(f"[ML API] Status: {response.status_code}")
+            print(f"[ML API] Response: {response.text}")
+            
             if response.status_code == 200:
                 data = response.json()
                 
                 if isinstance(data, list) and len(data) > 0:
                     item = data[0]
                     short_url = item.get('short_url') or item.get('url')
-                    if short_url: return short_url
+                    if short_url: 
+                        print(f"[ML OK] Link gerado: {short_url}")
+                        return short_url
                 elif isinstance(data, dict):
                     # For dict response, it might be {"status": 200, "urls": [...]}
                     urls_list = data.get('urls', [])
                     if urls_list and isinstance(urls_list, list) and len(urls_list) > 0:
                         item = urls_list[0]
                         short_url = item.get('short_url') or item.get('url')
-                        if short_url: return short_url
+                        if short_url: 
+                            print(f"[ML OK] Link gerado: {short_url}")
+                            return short_url
                     
                     short_url = data.get('short_url') or data.get('url')
-                    if short_url: return short_url
+                    if short_url: 
+                        print(f"[ML OK] Link gerado: {short_url}")
+                        return short_url
             
-            print(f"[ML Stripe] API falhou ({response.status_code})")
+            print(f"[ML fallback] Usando fallback social devido a falha na API")
             return fallback_social_url
 
 
