@@ -1099,7 +1099,8 @@ async def handle_index(request):
                     {{k:'green_api_instance_id',l:'ID Instância Green-API'}},
                     {{k:'green_api_token',l:'Token Green-API'}},
                     {{k:'green_api_host',l:'Host Green-API (ex: 7103.api.greenapi.com)'}},
-                    {{k:'whatsapp_destination',l:'🆔 ID Grupo(s) WA (separe por vírgula)'}}
+                    {{k:'whatsapp_destination',l:'🆔 ID Grupo(s) WA (separe por vírgula)'}},
+                    {{k:'target_channels',l:'🆔 ID Canal(is) Telegram (separe por vírgula)'}}
                 ];
                 const c = document.getElementById('settings-form');
                 c.innerHTML = "Carregando...";
@@ -1131,8 +1132,11 @@ async def handle_index(request):
                                 <div style="display:flex; flex-direction:column; gap:8px;">
                                     <input id="set-${{x.k}}" value="${{v.valor}}">
                                     ${{x.k === 'whatsapp_destination' ? `
-                                        <button onclick="loadWAGroups()" style="font-size:12px; background:var(--bg-card); color:var(--accent); border-style:dashed;">🔍 Ver Meus Grupos</button>
+                                        <button onclick="loadWAGroups()" style="font-size:12px; background:var(--bg-card); color:var(--accent); border-style:dashed;">🔍 Ver Meus Grupos WA</button>
                                         <div id="wa-groups-list-settings" style="display:none; max-height:200px; overflow-y:auto;"></div>
+                                    ` : x.k === 'target_channels' ? `
+                                        <button onclick="loadTGGroups()" style="font-size:12px; background:var(--bg-card); color:var(--accent); border-style:dashed;">🔍 Ver Meus Canais TG</button>
+                                        <div id="tg-groups-list-settings" style="display:none; max-height:200px; overflow-y:auto;"></div>
                                     ` : ''}}
                                 </div>
                         `}}
@@ -1206,10 +1210,76 @@ async def handle_index(request):
             function selectWAGroup(id) {{
                 const input = document.getElementById('set-whatsapp_destination');
                 if(input) {{
-                    input.value = id;
+                    let current = input.value.split(',').map(s => s.trim()).filter(s => s !== "");
+                    const idx = current.indexOf(id);
+                    if (idx > -1) {{
+                        current.splice(idx, 1);
+                    }} else {{
+                        current.push(id);
+                    }}
+                    input.value = current.join(', ');
                     if(window.Telegram && window.Telegram.WebApp) {{
                         Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                        input.style.backgroundColor = 'rgba(212, 42, 120, 0.2)'; /* literally_bot accent colors */
+                        input.style.backgroundColor = 'rgba(212, 42, 120, 0.2)';
+                        setTimeout(() => input.style.backgroundColor = 'var(--bg-main)', 1000);
+                    }}
+                }}
+            }}
+
+            async function loadTGGroups() {{
+                const container = document.getElementById('tg-groups-list-settings');
+                if(container.style.display === 'block') {{
+                    container.style.display = 'none';
+                    return;
+                }}
+                container.style.display = 'block';
+                container.innerHTML = "Carregando canais...";
+                try {{
+                    const r = await fetch(`/api/tg_groups?token=${{token}}`);
+                    const data = await r.json();
+                    if(data.error) {{
+                        container.innerHTML = `<span style="color:var(--error)">${{data.error}}</span>`;
+                        return;
+                    }}
+                    let groups = data.groups || [];
+                    if(groups.length === 0) {{
+                        container.innerHTML = "Nenhum canal encontrado.";
+                        return;
+                    }}
+                    
+                    let html = '<ul style="border:1px solid var(--border); border-radius:8px; padding:0 10px; background:var(--bg-main)">';
+                    groups.forEach(g => {{
+                        const displayId = g.username || g.id;
+                        html += `
+                            <li style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0; display: flex; border-bottom: 1px solid var(--border);">
+                                <div style="font-weight: bold; font-size: 14px;">${{g.name}}</div>
+                                <div style="font-family: monospace; color: var(--accent); cursor: pointer; font-size: 12px;" onclick="selectTGGroup('${{displayId}}')">
+                                    ${{displayId}} 📋
+                                </div>
+                            </li>
+                        `;
+                    }});
+                    html += '</ul>';
+                    container.innerHTML = html;
+                }} catch(e) {{
+                    container.innerHTML = "Erro ao carregar.";
+                }}
+            }}
+
+            function selectTGGroup(id) {{
+                const input = document.getElementById('set-target_channels');
+                if(input) {{
+                    let current = input.value.split(',').map(s => s.trim()).filter(s => s !== "");
+                    const idx = current.indexOf(id);
+                    if (idx > -1) {{
+                        current.splice(idx, 1);
+                    }} else {{
+                        current.push(id);
+                    }}
+                    input.value = current.join(', ');
+                    if(window.Telegram && window.Telegram.WebApp) {{
+                        Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                        input.style.backgroundColor = 'rgba(212, 42, 120, 0.2)';
                         setTimeout(() => input.style.backgroundColor = 'var(--bg-main)', 1000);
                     }}
                 }}
@@ -1619,6 +1689,35 @@ async def handle_wa_groups(request):
     except Exception as e:
         return web.json_response({"error": str(e)}, status=500)
 
+async def handle_tg_groups(request):
+    token = request.query.get('token')
+    valid_token = get_config("console_token")
+    if not valid_token or token != valid_token:
+        return web.json_response({"error": "Unauthorized"}, status=403)
+    try:
+        from monitor import client
+        if not client or not client.is_connected():
+            # Tenta conectar se não estiver
+            try: await client.connect()
+            except: pass
+            
+        if not client.is_connected():
+            return web.json_response({"error": "Userbot não conectado ao Telegram. Verifique os logs."}, status=503)
+        
+        dialogs = await client.get_dialogs(limit=100)
+        groups = []
+        for d in dialogs:
+            if d.is_group or d.is_channel:
+                username = getattr(d.entity, 'username', None)
+                groups.append({
+                    "id": d.id,
+                    "name": d.name,
+                    "username": f"@{username}" if username else None
+                })
+        return web.json_response({"groups": groups})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
 async def send_fb_capi_event(pixel_id, access_token, url, client_ip, user_agent, test_event_code=None):
     """Envia evento de PageView para o Facebook via API de Conversões (CAPI)"""
     import time
@@ -1904,6 +2003,7 @@ async def start_web_server():
     app.router.add_post('/api/post_offer', handle_post_offer)
     app.router.add_get('/api/posts', handle_posts_api)
     app.router.add_get('/api/wa_groups', handle_wa_groups)
+    app.router.add_get('/api/tg_groups', handle_tg_groups)
     
     # Rota Curinga para redirecionamentos (Encurtador)
     app.router.add_get(r'/{code:[a-zA-Z0-9]{6}}', handle_short_link_redirect)

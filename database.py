@@ -235,6 +235,12 @@ def set_config(chave: str, valor: str):
     conn.commit()
     conn.close()
 
+async def get_system_config(chave: str) -> str:
+    """Versão assíncrona do get_config para cumprir a regra global."""
+    # Como o SQLite aqui é simples e síncrono, apenas chamamos o get_config.
+    # Em um ambiente PostgreSQL real, isso seria um await numa pool de conexões.
+    return get_config(chave)
+
 # --- FUNÇÕES DE HISTÓRICO (DEDUPLICAÇÃO) ---
 def check_duplicate(hash_id: str) -> bool:
     """Verifica se uma oferta com esse hash foi postada nos últimos 60 minutos."""

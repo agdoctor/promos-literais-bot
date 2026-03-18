@@ -374,7 +374,10 @@ async def start_monitoring():
                     except:
                         pass
                 
-            # --- DEDUPLICAÇÃO NO CANAL DESTINO ---
+            # --- DEDUPLICAÇÃO NOS CANAIS DESTINO ---
+            from config import get_target_channels
+            target_channels = get_target_channels()
+            
             # Tenta buscar o título exato via IA para evitar falsos positivos
             from rewriter import extrair_nome_produto
             titulo_real = await extrair_nome_produto(mensagem_texto)
@@ -417,60 +420,66 @@ async def start_monitoring():
             valor_referencia = todos_precos[0] if todos_precos else "0"
             valor_referencia_limpo = valor_referencia.replace('.', '').replace(',', '.')
             
-            # Busca no histórico recente do canal destino
-            print(f"🔍 Verificando duplicidade no canal de destino ({TARGET_CHANNEL})... Buscando: '{titulo_real}' e 'R$ {valor_referencia}'")
+            # Busca no histórico recente dos canais destino
             oferta_duplicada = False
-            try:
-                # Retorna mensagens das últimas 1 hora (60 minutos) usando o telethon client iter_messages
-                from datetime import datetime, timedelta, timezone
-                time_threshold = datetime.now(timezone.utc) - timedelta(minutes=60)
-                
-                async for past_msg in client.iter_messages(TARGET_CHANNEL, offset_date=datetime.now(timezone.utc)):
-                    if past_msg.date < time_threshold:
-                        break # Só checa a última hora
+            canal_duplicado = ""
+            
+            for channel_target in target_channels:
+                print(f"🔍 Verificando duplicidade no canal de destino ({channel_target})... Buscando: '{titulo_real}' e 'R$ {valor_referencia}'")
+                try:
+                    # Retorna mensagens das últimas 1 hora (60 minutos) usando o telethon client iter_messages
+                    from datetime import datetime, timedelta, timezone
+                    time_threshold = datetime.now(timezone.utc) - timedelta(minutes=60)
                     
-                    if past_msg.text:
-                        # Limpa o texto passado e o titulo real pesquisado para fazer match case-insensitive e sem acentos de forma basica
-                        past_text_lower = past_msg.text.lower()
-                        titulo_pesquisa_lower = titulo_real.lower()
+                    async for past_msg in client.iter_messages(channel_target, offset_date=datetime.now(timezone.utc)):
+                        if past_msg.date < time_threshold:
+                            break # Só checa a última hora
                         
-                        # Precisa achar palavras-chave do título e o valor exato no post do canal destino
-                        # Dividimos o titulo real pesquisado em tokens
-                        tokens_titulo = [t for t in titulo_pesquisa_lower.split() if len(t) > 3]
-                        
-                        # Match 1: O valor numérico precisa estar no post
-                        valor_encontrado_historico = re.findall(r'R\$\s?(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)', past_text_lower)
-                        valores_historico_limpos = [v.replace('.', '').replace(',', '.') for v in valor_encontrado_historico]
-                        
-                        teve_match_valor = valor_referencia_limpo in valores_historico_limpos
-                        teve_match_titulo = False
-                        
-                        if tokens_titulo:
-                            matches = sum(1 for t in tokens_titulo if t in past_text_lower)
-                            # Se pelo menos 50% dos tokens do produto alvo estiverem no post destino
-                            if matches / len(tokens_titulo) >= 0.5:
-                                teve_match_titulo = True
-                        else:
-                             # Se o titulo for só uma short string (ou link), busca raw match
-                             if titulo_pesquisa_lower in past_text_lower:
-                                  teve_match_titulo = True
-                                  
-                        if teve_match_valor and teve_match_titulo:
-                            oferta_duplicada = True
-                            print(f"🛑 Post ignorado: Exatamente este produto '{titulo_real}' por R$ {valor_referencia} já foi postado no canal de destino nos últimos 60 minutos.")
+                        if past_msg.text:
+                            # Limpa o texto passado e o titulo real pesquisado para fazer match case-insensitive e sem acentos de forma basica
+                            past_text_lower = past_msg.text.lower()
+                            titulo_pesquisa_lower = titulo_real.lower()
                             
-                            admin_id_str = get_config("admin_id")
-                            if admin_id_str:
-                                try:
-                                    msg_info = f"🚫 **Post Ignorado por Duplicação no {TARGET_CHANNEL}**\nO produto *{titulo_real}* por R$ {valor_referencia} já foi anunciado pelo robô há menos de 60 minutos."
-                                    await bot.send_message(chat_id=int(admin_id_str), text=msg_info, parse_mode="Markdown")
-                                except: pass
-                            break
+                            # Precisa achar palavras-chave do título e o valor exato no post do canal destino
+                            # Dividimos o titulo real pesquisado em tokens
+                            tokens_titulo = [t for t in titulo_pesquisa_lower.split() if len(t) > 3]
                             
-            except Exception as e:
-                print(f"⚠️ Erro ao verificar histórico do canal de destino: {e}")
+                            # Match 1: O valor numérico precisa estar no post
+                            valor_encontrado_historico = re.findall(r'R\$\s?(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)', past_text_lower)
+                            valores_historico_limpos = [v.replace('.', '').replace(',', '.') for v in valor_encontrado_historico]
+                            
+                            teve_match_valor = valor_referencia_limpo in valores_historico_limpos
+                            teve_match_titulo = False
+                            
+                            if tokens_titulo:
+                                matches = sum(1 for t in tokens_titulo if t in past_text_lower)
+                                # Se pelo menos 50% dos tokens do produto alvo estiverem no post destino
+                                if matches / len(tokens_titulo) >= 0.5:
+                                    teve_match_titulo = True
+                            else:
+                                 # Se o titulo for só uma short string (ou link), busca raw match
+                                 if titulo_pesquisa_lower in past_text_lower:
+                                      teve_match_titulo = True
+                                      
+                            if teve_match_valor and teve_match_titulo:
+                                oferta_duplicada = True
+                                canal_duplicado = channel_target
+                                print(f"🛑 Post ignorado: Exatamente este produto '{titulo_real}' por R$ {valor_referencia} já foi postado no canal de destino {channel_target} nos últimos 60 minutos.")
+                                break
+                    
+                    if oferta_duplicada:
+                        break # Não precisa checar outros canais se já achou duplicata em um
+                        
+                except Exception as e:
+                    print(f"⚠️ Erro ao verificar histórico do canal de destino {channel_target}: {e}")
                 
             if oferta_duplicada:
+                admin_id_str = get_config("admin_id")
+                if admin_id_str:
+                    try:
+                        msg_info = f"🚫 **Post Ignorado por Duplicação no {canal_duplicado}**\nO produto *{titulo_real}* por R$ {valor_referencia} já foi anunciado pelo robô há menos de 60 minutos."
+                        await bot.send_message(chat_id=int(admin_id_str), text=msg_info, parse_mode="Markdown")
+                    except: pass
                 return
 
             # --- NOTIFICAÇÃO ADMIN ---

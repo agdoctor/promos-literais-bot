@@ -37,4 +37,25 @@ WHATSAPP_DESTINATION = os.getenv("WHATSAPP_DESTINATION") # ID do Grupo ou Comuni
 
 # Tratar os canais, permitindo múltiplos separados por vírgula no futuro
 SOURCE_CHANNELS = [c.strip() for c in os.getenv("SOURCE_CHANNELS", "").split(',') if c.strip()]
-TARGET_CHANNEL = os.getenv("TARGET_CHANNEL")
+# Canais de destino (suporta múltiplos separados por vírgula)
+_target_env = os.getenv("TARGET_CHANNELS") or os.getenv("TARGET_CHANNEL", "")
+TARGET_CHANNELS = [c.strip() for c in _target_env.split(',') if c.strip()]
+# Alias para compatibilidade com o código que espera apenas um canal (pega o primeiro)
+TARGET_CHANNEL = TARGET_CHANNELS[0] if TARGET_CHANNELS else None
+
+def get_target_channels():
+    """Busca canais de destino de forma dinâmica (Prioridade: Banco > Env)."""
+    try:
+        from database import get_config
+        db_val = get_config("target_channels")
+        if db_val:
+            return [c.strip() for c in db_val.split(',') if c.strip()]
+    except Exception:
+        pass
+    
+    # Fallback dinâmico para variáveis de ambiente
+    _target_env = os.getenv("TARGET_CHANNELS") or os.getenv("TARGET_CHANNEL", "")
+    if _target_env:
+        return [c.strip() for c in _target_env.split(',') if c.strip()]
+        
+    return TARGET_CHANNELS
